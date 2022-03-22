@@ -1,33 +1,29 @@
 package umu.software.activityrecognition.sensors;
 
 import android.annotation.SuppressLint;
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.BitmapFactory;
+
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
-import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
-import java.util.Arrays;
 import java.util.concurrent.Callable;
 
 import umu.software.activityrecognition.R;
-import umu.software.activityrecognition.common.AndroidUtils;
+import umu.software.activityrecognition.common.lifecycles.ForegroundServiceLifecycle;
+import umu.software.activityrecognition.common.lifecycles.LifecyclesService;
 import umu.software.activityrecognition.sensors.persistence.Persistence;
 import umu.software.activityrecognition.sensors.accumulators.Accumulators;
 import umu.software.activityrecognition.sensors.accumulators.SensorAccumulatorManager;
-import umu.software.activityrecognition.tflite.TFLiteModel;
+
 
 /**
  * Started Service that records and saves sensor data through a SensorAccumulatorManager
@@ -38,8 +34,8 @@ import umu.software.activityrecognition.tflite.TFLiteModel;
  *    bt utilizing the Persistence class
  *  The service also allows binding to directly access its methods
  */
-public class RecordService extends Service {
-
+public class RecordService extends LifecyclesService
+{
     public static class RecordBinder extends Binder
     {
         private final RecordService service;
@@ -63,67 +59,45 @@ public class RecordService extends Service {
     public static final int DEFAULT_RECURRENT_SAVE_SECS = 600;
 
 
-    RecordBinder mBinder = new RecordBinder(this);
-
-
     boolean mRestartOnDestroy = true;
 
-    SensorAccumulatorManager mSensorManager = Accumulators.newAccumulatorManager(Accumulators.newFactory());
+    SensorAccumulatorManager mAccumulatorManager = Accumulators.newAccumulatorManager(Accumulators.newFactory());
+
+    ForegroundServiceLifecycle foregroundLifecycle;
 
 
-    /**
-     * This is a Foreground service so we need to initialize it creating a notification and calling
-     * startForeground()
-     */
-    private void initializeForegroundService()
-    {
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
-        {
-            return;
-        }
-        String channelId = getString(R.string.notification_title);
-
-        NotificationChannel channel = new NotificationChannel(
-                channelId,
-                channelId,
-                NotificationManager.IMPORTANCE_DEFAULT
-        );
-
-        AndroidUtils
-                .getNotificationManager(this)
-                .createNotificationChannel(channel);
-
-        Intent stopIntent = getStopIntent(this);
-
-        PendingIntent pendingIntent = PendingIntent.getService(
-                this,
-                0,
-                stopIntent,
-                PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-        @SuppressLint("LaunchActivityFromNotification") Notification n = new NotificationCompat.Builder(this, channelId)
-                .setContentTitle(getString(R.string.notification_title))
-                .setContentText(getString(R.string.notification_text))
-                .setSmallIcon(R.mipmap.ic_watch_round)
-                .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_watch_round))
-                .setContentIntent(pendingIntent)
-                .setAutoCancel(false)
-                .setOngoing(true)
-                .setVibrate(new long[]{0L, 0L, 0L})
-                .build();
-
-        startForeground(1400000, n);
-    }
-
+    @SuppressLint("LaunchActivityFromNotification")
     @Override
     public void onCreate()
     {
         super.onCreate();
+        foregroundLifecycle = new ForegroundServiceLifecycle(
+            140000,
+            this.getString(R.string.notification_title),
+            builder -> {
+                Intent stopIntent = getStopIntent(this);
+
+                PendingIntent pendingIntent = PendingIntent.getService(
+                        this,
+                        0,
+                        stopIntent,
+                        PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                );
+                builder
+                        .setContentTitle(getString(R.string.notification_title))
+                        .setContentText(getString(R.string.notification_text))
+                        .setSmallIcon(R.mipmap.ic_watch_round)
+                        .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_watch_round))
+                        .setContentIntent(pendingIntent)
+                        .setAutoCancel(false)
+                        .setOngoing(true)
+                        .setVibrate(new long[]{0L, 0L, 0L});
+            }
+        );
+        addLifecycleElement(mAccumulatorManager);
+        addLifecycleElement(foregroundLifecycle);
         mRestartOnDestroy = true;
-        mSensorManager.onCreate(this);
-        initializeForegroundService();
-        TFLiteModel.ENCODER_GRAVITY.onCreate(this);
     }
 
 
@@ -131,21 +105,18 @@ public class RecordService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId)
     {
         Log.i(RecordService.class.getName(),
-                String.format("RecordService onStartCommand() -> %s", (intent != null)? intent.toString() : "null")
+                String.format("RecordService: onStartCommand() -> %s", (intent != null)? intent.toString() : "null")
         );
         super.onStartCommand(intent, flags, startId);
-        initializeForegroundService();
 
         String action = intent == null? ACTION_START_RECORDING : intent.getAction();
 
         switch (action)
         {
-            default: // ACTION_START_RECORDING
+            case RecordService.ACTION_START_RECORDING: /* Since the accumulators are already handled by the lifecycle manager we only need to restart RecurrentSave */
                 RecurrentSave.stop(this);
                 int saveDelay = intent == null? DEFAULT_RECURRENT_SAVE_SECS : intent.getIntExtra(EXTRA_RECURRENT_SAVE_SECS, DEFAULT_RECURRENT_SAVE_SECS);
                 RecurrentSave.start(this, saveDelay);
-                mSensorManager.onStart(this);
-                startTFLite();
                 break;
             case RecordService.ACTION_STOP_RECORDING:
                 mRestartOnDestroy = false;
@@ -156,43 +127,29 @@ public class RecordService extends Service {
             case RecordService.ACTION_SAVE_ZIP_CLEAR:
                 saveZipClearSensorsFiles();
                 break;
+            default:
+                Log.w(RecordService.class.getName(),
+                        String.format("RecordService: unknown Action -> %s", intent)
+                );
+                break;
         }
 
         return START_STICKY;
     }
 
+
     /**
-     * TO BE REMOVED Try TFLite components
+     * Restarts the service if it was not destroyed through an intent but by the system
      */
-    void startTFLite()
-    {
-
-        TFLiteModel.ENCODER_GRAVITY.onStart(this);
-
-
-        new Thread(() -> {
-            try {
-                Thread.sleep(10000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            while (true){
-                if (TFLiteModel.ENCODER_GRAVITY.predict()) {
-                    float[][] prediction = TFLiteModel.ENCODER_GRAVITY.getOutput(0);
-                    Log.i("prediction", Arrays.toString(prediction[0]));
-                }
-            }
-        }).start();
-    }
-
     @Override
     public void onDestroy()
     {
         super.onDestroy();
-        mSensorManager.onStop(this);
         saveZipClearSensorsFiles();
-        mSensorManager.onDestroy(this);
-        if (mRestartOnDestroy) { RecordServiceStarter.broadcast(this); }
+        if (mRestartOnDestroy)
+        {
+            RecordServiceStarter.broadcast(this);
+        }
     }
 
 
@@ -200,8 +157,9 @@ public class RecordService extends Service {
     @Override
     public IBinder onBind(Intent intent)
     {
-        return this.mBinder;
+        return new RecordBinder(this);
     }
+
 
 
 
@@ -230,7 +188,7 @@ public class RecordService extends Service {
      */
     public Callable<Integer> saveSensorsFiles()
     {
-        return Persistence.INSTANCE.saveToFile(mSensorManager.getAccumulators().values());
+        return Persistence.INSTANCE.saveToFile(mAccumulatorManager.getAccumulators().values(), true);
     }
 
 
@@ -244,7 +202,7 @@ public class RecordService extends Service {
      */
     public Callable<Integer> incrementalZipSensorsFiles()
     {
-        return Persistence.INSTANCE.createIncrementalZip(mSensorManager.getAccumulators().values());
+        return Persistence.INSTANCE.createIncrementalZip(mAccumulatorManager.getAccumulators().values());
     }
 
 
@@ -256,7 +214,7 @@ public class RecordService extends Service {
      */
     public Callable<Integer> clearSensorsFiles()
     {
-        return Persistence.INSTANCE.deleteFiles(mSensorManager.getAccumulators().values());
+        return Persistence.INSTANCE.deleteFiles(mAccumulatorManager.getAccumulators().values());
     }
 
 
@@ -275,7 +233,6 @@ public class RecordService extends Service {
 
 
 
-
     // Helper functions to start the service
 
     public static Intent getStartIntent(Context context)
@@ -287,7 +244,7 @@ public class RecordService extends Service {
      * Get the START_RECORDING intent with the specified save interval
      * @param context calling android context
      * @param recurrentSaveSecs the seconds to recurrently invoke the save and zip procedure
-     * @return
+     * @return the starting intent
      */
     public static Intent getStartIntent(Context context, int recurrentSaveSecs)
     {

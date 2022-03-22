@@ -36,6 +36,7 @@ public enum Persistence
         this.sensorFolder = sensorFolder;
     }
 
+
     public void askPermissions(Activity activity)
     {
         Permissions.READ_EXTERNAL_STORAGE.askPermission(activity);
@@ -43,15 +44,9 @@ public enum Persistence
     }
 
 
-    public Callable<Integer> saveToFile(SensorAccumulator... accums)
+    public Callable<Integer> saveToFile(Collection<SensorAccumulator> sensors, boolean resetSensors)
     {
-        return saveToFile(Arrays.asList(accums));
-    }
-
-
-    public Callable<Integer> saveToFile(Collection<SensorAccumulator> sensors)
-    {
-        SensorFileWriterAsyncTask writer = new SensorFileWriterAsyncTask(sensorFolder);
+        SensorFileWriterAsyncTask writer = new SensorFileWriterAsyncTask(sensorFolder, resetSensors);
         writer.execute(filterInitialized(sensors));
 
         return writer::get;

@@ -14,28 +14,31 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
 
-public class SensorAccumulator implements SensorEventListener
+public class SensorAccumulator extends Accumulator<SensorEvent> implements SensorEventListener
 {
-    ReentrantLock lock = new ReentrantLock();
-    Function<SensorEvent, Boolean> state;
-
-    protected Sensor sensor = null;        // These are initialized in the first call of state.apply() (by using uninitializedState)
+    protected Sensor sensor;
     protected long startTimestamp = 0L;
     protected long lastTimestamp = 0L;
-    protected DataFrame dataframe;
     protected Map<String, Function<SensorEvent, Object>> columnGetters;
 
     public SensorAccumulator()
     {
-        this.state = unitializedState();
-        this.dataframe = new DataFrame();
         columnGetters = new HashMap<>();
+    }
+
+    @Override
+    public void reset()
+    {
+        super.reset();
+        startTimestamp = 0L;
+        lastTimestamp = 0L;
     }
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent)
     {
-        state.apply(sensorEvent);
+        accept(sensorEvent);
+        lastTimestamp = sensorEvent.timestamp;
     }
 
 
@@ -46,42 +49,30 @@ public class SensorAccumulator implements SensorEventListener
     }
 
 
-    public void reset()
-    {
-        state = unitializedState();
-    }
-
-
-    public int countReadings()
-    {
-        return dataframe.countRows();
-    }
-
-
     public Sensor getSensor()
     {
         return sensor;
     }
 
-
-    public DataFrame getDataFrame()
+    @Override
+    protected Function<SensorEvent, Boolean> unitializedState()
     {
-        lock.lock();
-        DataFrame df = dataframe.clone();
-        lock.unlock();
-        return df;
+        return super.unitializedState();
     }
 
-
-    protected Map<String, Function<SensorEvent, Object>> columnGetters(int num_features)
+    @Override
+    protected Map<String, Function<SensorEvent, Object>> initializeColumns(SensorEvent event)
     {
+        sensor = event.sensor;
+        startTimestamp = lastTimestamp = event.timestamp;
+
         HashMap<String, Function<SensorEvent, Object>> getters =  new HashMap<>();
         getters.put("timestamp", (e) -> e.timestamp / 1e6);
         getters.put("relative_timestamp", (e) -> (e.timestamp - startTimestamp) / 1e6);
         getters.put("delta_timestamp", (e) -> (e.timestamp - lastTimestamp) / 1e6);
         getters.put("accuracy", (e) -> e.accuracy);
 
-        for (int i=0; i < num_features; i++)
+        for (int i=0; i < event.values.length; i++)
         {
             @SuppressLint("DefaultLocale") String colname = String.format("f_%d", i);
             final int iFinal = i;
@@ -93,43 +84,5 @@ public class SensorAccumulator implements SensorEventListener
     }
 
 
-    protected Function<SensorEvent, Boolean> unitializedState()
-    {
 
-        return event -> {
-            columnGetters = columnGetters(event.values.length);
-
-            String[] colNames = columnGetters.keySet().toArray(new String[0]);
-
-            sensor = event.sensor;
-            startTimestamp = lastTimestamp = event.timestamp;
-            dataframe = new DataFrame(colNames);
-            state = initializedState();
-            onSensorChanged(event);
-            return true;
-        };
-
-    }
-
-    protected Function<SensorEvent, Boolean> initializedState()
-    {
-
-        return event -> {
-            if (!event.sensor.getName().equals(sensor.getName()))
-            {
-                return false;
-            }
-            lock.lock();
-
-            HashMap<String, Object> row = new HashMap<>();
-
-            columnGetters.forEach((colname, getter) -> row.put(colname, getter.apply(event)));
-
-            lastTimestamp = event.timestamp;
-            dataframe.appendRow(row);
-            lock.unlock();
-            return true;
-        };
-
-    }
 }

@@ -13,25 +13,28 @@ public class SensorFileWriterAsyncTask extends FileWriterAsyncTask<SensorAccumul
 {
 
     private final String folderName;
+    private final boolean reset;
 
-    public SensorFileWriterAsyncTask(String folderName)
+    public SensorFileWriterAsyncTask(String folderName, boolean reset)
     {
         this.folderName = folderName;
+        this.reset = reset;
     }
 
     @Override
-    FileOutputStream getOutputStream(SensorAccumulator sensor) throws IOException
+    public FileOutputStream getOutputStream(SensorAccumulator sensor) throws IOException
     {
         File file = getOutputFile(sensor);
         return new FileOutputStream(file, true);
     }
 
     @Override
-    String getFileContent(SensorAccumulator sensor) throws IOException
+    public String getFileContent(SensorAccumulator sensor) throws IOException
     {
         File file = getOutputFile(sensor);
         DataFrame df = sensor.getDataFrame();
-        sensor.reset();
+        if (reset)
+            sensor.reset();
         boolean exists = file.exists();
         return df.toCSV(exists);
     }

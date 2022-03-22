@@ -5,18 +5,22 @@ import android.content.Context;
 import android.content.Intent;
 
 
+/**
+ * This component restart the RecordService if it stopped without an actual stop intent.
+ * For example by the system
+ */
 
 public class RecordServiceStarter extends BroadcastReceiver
 {
+
     @Override
     public void onReceive(Context context, Intent intent) {
 
         int recurrentSaveSecs = intent.getIntExtra(
                 RecordService.EXTRA_RECURRENT_SAVE_SECS,
-                RecordService.DEFAULT_RECURRENT_SAVE_SECS
+                RecordService.DEFAULT_RECURRENT_SAVE_SECS // default value
         );
         RecordService.start(context, recurrentSaveSecs);
-        RecurrentSave.start(context);
     }
 
 

@@ -1,28 +1,32 @@
 package umu.software.activityrecognition.activities;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.os.Bundle;
 import android.hardware.SensorManager;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.Arrays;
 import java.util.function.Function;
 
 import umu.software.activityrecognition.R;
 import umu.software.activityrecognition.SensorListAdapter;
 import umu.software.activityrecognition.common.AndroidUtils;
+import umu.software.activityrecognition.common.lifecycles.LifecyclesActivity;
 import umu.software.activityrecognition.sensors.persistence.Persistence;
 import umu.software.activityrecognition.sensors.RecordService;
 import umu.software.activityrecognition.sensors.RecordServiceConnection;
 import umu.software.activityrecognition.sensors.RecordServiceStarter;
+import umu.software.activityrecognition.tflite.TFLiteModel;
 
 /**
  * The Main Activity just start RecordServive and then finishes.
  */
-public class MainActivity extends Activity {
+public class MainActivity extends LifecyclesActivity
+{
 
 
     RecordServiceConnection serviceConnection = new RecordServiceConnection();
@@ -35,6 +39,8 @@ public class MainActivity extends Activity {
     {
         super.onCreate(savedInstanceState);
         Persistence.INSTANCE.askPermissions(this);
+
+        //addLifecycleElement(TFLiteModel.ENCODER_GRAVITY);
 
 
         setContentView(R.layout.activity_main);
@@ -57,9 +63,31 @@ public class MainActivity extends Activity {
         RecordServiceStarter.broadcast(this, 10);
 
 
+        //startTFLitePrediction();
         finish(); // Comment this line to see the available sensors in the GUI
     }
 
+    /**
+     * TO BE REMOVED Try TFLite components
+     */
+    void startTFLitePrediction()
+    {
+
+
+        new Thread(() -> {
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            while (true){
+                if (TFLiteModel.ENCODER_GRAVITY.predict()) {
+                    float[][] prediction = TFLiteModel.ENCODER_GRAVITY.getOutput(0);
+                    Log.i("prediction", Arrays.toString(prediction[0]));
+                }
+            }
+        }).start();
+    }
 
     private void bindAndSaveFiles()
     {

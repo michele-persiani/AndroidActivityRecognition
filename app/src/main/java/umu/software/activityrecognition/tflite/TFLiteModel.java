@@ -15,11 +15,11 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 
-import umu.software.activityrecognition.common.ComponentLifecycle;
+import umu.software.activityrecognition.common.lifecycles.LifecycleElement;
 import umu.software.activityrecognition.common.AndroidUtils;
 
 
-public enum TFLiteModel implements ComponentLifecycle
+public enum TFLiteModel implements LifecycleElement
 {
 
     ENCODER_GRAVITY("encoder.tflite",

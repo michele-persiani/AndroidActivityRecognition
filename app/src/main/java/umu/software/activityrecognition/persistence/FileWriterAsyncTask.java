@@ -9,10 +9,10 @@ import java.io.OutputStreamWriter;
 public abstract class FileWriterAsyncTask<T> extends AsyncTask<T, Boolean, Integer>
 {
 
-    abstract FileOutputStream getOutputStream(T input) throws IOException;
+    protected abstract FileOutputStream getOutputStream(T input) throws IOException;
 
 
-    abstract String getFileContent(T input) throws IOException;
+    public abstract String getFileContent(T input) throws IOException;
 
 
     private Boolean processInput(T input)

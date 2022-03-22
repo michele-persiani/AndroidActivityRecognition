@@ -12,12 +12,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import umu.software.activityrecognition.common.ComponentLifecycle;
+import umu.software.activityrecognition.common.lifecycles.LifecycleElement;
 import umu.software.activityrecognition.common.Factory;
 import umu.software.activityrecognition.common.AndroidUtils;
 
 
-public class SensorAccumulatorManager implements ComponentLifecycle
+public class SensorAccumulatorManager implements LifecycleElement
 {
     private final int mDelay;
     private final Factory<SensorAccumulator> mFactory;
@@ -191,5 +191,16 @@ public class SensorAccumulatorManager implements ComponentLifecycle
             stoppedSensors += res ? 1 : 0;
         }
         return stoppedSensors;
+    }
+
+    /**
+     * Resets all accumulators
+     * @return number of reset accumulators
+     */
+    public int resetAccumulators()
+    {
+        for (SensorAccumulator acc : mListeners.values())
+            acc.reset();
+        return mListeners.size();
     }
 }
