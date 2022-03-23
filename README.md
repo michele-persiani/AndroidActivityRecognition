@@ -2,7 +2,7 @@
 
 
 
-Android application that records and saves the data from the available sensor. Work in progress.
+Android application that records and saves the data from the available sensor.
 
 TODO: add Tensorflow Lite classifier
 
