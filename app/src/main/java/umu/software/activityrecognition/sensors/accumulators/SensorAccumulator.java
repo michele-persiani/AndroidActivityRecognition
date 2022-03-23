@@ -6,31 +6,31 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 
 import com.c_bata.DataFrame;
+import com.google.common.collect.Lists;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 
 public class SensorAccumulator extends Accumulator<SensorEvent> implements SensorEventListener
 {
     protected Sensor sensor;
-    protected long startTimestamp = 0L;
     protected long lastTimestamp = 0L;
-    protected Map<String, Function<SensorEvent, Object>> columnGetters;
 
     public SensorAccumulator()
     {
-        columnGetters = new HashMap<>();
     }
 
     @Override
     public void reset()
     {
         super.reset();
-        startTimestamp = 0L;
         lastTimestamp = 0L;
     }
 
@@ -38,7 +38,6 @@ public class SensorAccumulator extends Accumulator<SensorEvent> implements Senso
     public void onSensorChanged(SensorEvent sensorEvent)
     {
         accept(sensorEvent);
-        lastTimestamp = sensorEvent.timestamp;
     }
 
 
@@ -60,29 +59,28 @@ public class SensorAccumulator extends Accumulator<SensorEvent> implements Senso
         return super.unitializedState();
     }
 
+
+    @SuppressLint("DefaultLocale")
     @Override
-    protected Map<String, Function<SensorEvent, Object>> initializeColumns(SensorEvent event)
+    protected List<BiConsumer<SensorEvent, DataFrame.Row>> initializeConsumers()
     {
-        sensor = event.sensor;
-        startTimestamp = lastTimestamp = event.timestamp;
+        return Lists.newArrayList((e, r) -> {
+            r.put("timestamp", TimeUnit.MILLISECONDS.convert(e.timestamp, TimeUnit.NANOSECONDS));
+            r.put("delta_timestamp", TimeUnit.MILLISECONDS.convert(
+                    lastTimestamp > 0? e.timestamp - lastTimestamp : 0,
+                    TimeUnit.NANOSECONDS
+            ));
+            r.put("accuracy", e.accuracy);
+            for (int i=0; i < e.values.length; i++)
+            {
+                String colname = String.format("f_%d", i);
+                r.put(colname, e.values[i]);
+            }
+            lastTimestamp = e.timestamp;
+            this.sensor = e.sensor;
+        });
 
-        HashMap<String, Function<SensorEvent, Object>> getters =  new HashMap<>();
-        getters.put("timestamp", (e) -> e.timestamp / 1e6);
-        getters.put("relative_timestamp", (e) -> (e.timestamp - startTimestamp) / 1e6);
-        getters.put("delta_timestamp", (e) -> (e.timestamp - lastTimestamp) / 1e6);
-        getters.put("accuracy", (e) -> e.accuracy);
-
-        for (int i=0; i < event.values.length; i++)
-        {
-            @SuppressLint("DefaultLocale") String colname = String.format("f_%d", i);
-            final int iFinal = i;
-            getters.put(colname, (e) -> e.values[iFinal]);
-
-        }
-
-        return getters;
     }
-
 
 
 }

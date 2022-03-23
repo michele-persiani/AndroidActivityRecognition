@@ -11,6 +11,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import umu.software.activityrecognition.common.lifecycles.LifecycleElement;
 import umu.software.activityrecognition.common.Factory;
@@ -117,6 +119,18 @@ public class SensorAccumulatorManager implements LifecycleElement
     {
         return mListeners.get(sensorId);
     }
+
+
+    /**
+     * Iterate all the accumulators
+     * @param consumer the BiConsumer that
+     */
+    public void forEachAccumulator(BiConsumer<Integer, SensorAccumulator> consumer)
+    {
+        for (Map.Entry<Integer, SensorAccumulator> acc : getAccumulators().entrySet())
+            consumer.accept(acc.getKey(), acc.getValue());
+    }
+
 
     /**
      * Register a SensorAccumulator to the sensor with the given Id. The Id order is determined

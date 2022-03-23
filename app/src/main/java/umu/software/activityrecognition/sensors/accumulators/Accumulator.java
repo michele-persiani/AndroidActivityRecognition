@@ -3,28 +3,34 @@ package umu.software.activityrecognition.sensors.accumulators;
 import android.annotation.SuppressLint;
 
 import com.c_bata.DataFrame;
+import com.google.common.collect.Lists;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 public abstract class Accumulator<T> implements Consumer<T>
 {
-    ReentrantLock lock = new ReentrantLock();
-    Function<T, Boolean> state;
+    private final ReentrantLock lock = new ReentrantLock();
+    private Function<T, Boolean> state;
 
     protected DataFrame dataframe;
-    protected Map<String, Function<T, Object>> columnGetters;
+    protected List<BiConsumer<T, DataFrame.Row>> consumers;
 
     public Accumulator()
     {
         state = unitializedState();
         dataframe = new DataFrame();
-        columnGetters = new HashMap<>();
     }
 
+    public List<BiConsumer<T, DataFrame.Row>> consumers()
+    {
+        return consumers;
+    }
 
     @Override
     public void accept(T event)
@@ -53,19 +59,17 @@ public abstract class Accumulator<T> implements Consumer<T>
         return df;
     }
 
-    protected abstract Map<String, Function<T, Object>> initializeColumns(T event);
 
+
+    protected abstract List<BiConsumer<T, DataFrame.Row>> initializeConsumers();
 
 
     protected Function<T, Boolean> unitializedState()
     {
 
         return event -> {
-            columnGetters = initializeColumns(event);
-
-            String[] colNames = columnGetters.keySet().toArray(new String[0]);
-
-            dataframe = new DataFrame(colNames);
+            consumers = initializeConsumers();
+            dataframe = new DataFrame();
             state = initializedState();
             accept(event);
             return true;
@@ -77,11 +81,8 @@ public abstract class Accumulator<T> implements Consumer<T>
     {
         return event -> {
             lock.lock();
-
-            HashMap<String, Object> row = new HashMap<>();
-
-            columnGetters.forEach((colname, getter) -> row.put(colname, getter.apply(event)));
-
+            DataFrame.Row row = new DataFrame.Row();
+            consumers.forEach(c -> c.accept(event, row));
             dataframe.appendRow(row);
             lock.unlock();
             return true;

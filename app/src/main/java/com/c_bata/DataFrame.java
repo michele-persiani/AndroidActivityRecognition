@@ -11,6 +11,10 @@ import java.util.function.Function;
 
 public class DataFrame extends LinkedHashMap<String, Series>
 {
+    public static class Row extends LinkedHashMap<String, Object>
+    {
+
+    }
 
     private ReentrantLock semaphore;
 

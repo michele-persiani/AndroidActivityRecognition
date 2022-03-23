@@ -56,7 +56,7 @@ public class RecordService extends LifecyclesService
 
 
     public static final String EXTRA_RECURRENT_SAVE_SECS = "RecordService.ACTION_ZIP_FILES";
-    public static final int DEFAULT_RECURRENT_SAVE_SECS = 600;
+    public static final int DEFAULT_RECURRENT_SAVE_SECS = 60;
 
 
     boolean mRestartOnDestroy = true;
