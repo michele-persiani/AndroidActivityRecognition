@@ -5,10 +5,13 @@
       <map>
         <entry key="../../../../../layout/custom_preview.xml" value="0.23072916666666668" />
         <entry key="app/src/main/res/drawable/ic_watch_background.xml" value="0.2295" />
-        <entry key="app/src/main/res/layout/activity_main.xml" value="0.25" />
+        <entry key="app/src/main/res/layout/activity_main.xml" value="0.5419198055893074" />
+        <entry key="app/src/main/res/layout/buttons_gui.xml" value="1.5928571428571427" />
         <entry key="app/src/main/res/layout/sensor_adapter_text.xml" value="0.3453125" />
-        <entry key="app/src/main/res/layout/sensor_holder.xml" value="0.1" />
+        <entry key="app/src/main/res/layout/sensor_holder.xml" value="0.5" />
         <entry key="app/src/main/res/layout/sensors_list.xml" value="0.203125" />
+        <entry key="app/src/main/res/mipmap-anydpi-v26/ic_watch.xml" value="0.1" />
+        <entry key="app/src/main/res/mipmap-anydpi-v26/ic_watch_round.xml" value="0.126" />
       </map>
     </option>
   </component>

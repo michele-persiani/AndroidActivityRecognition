@@ -1,40 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="umu.software.activityrecognition"
-    >
+    package="umu.software.activityrecognition">
 
-    <!--
-    <uses-feature android:name="android.hardware.type.watch" />
-    -->
-
+    <!-- Required to act as a custom watch face. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Required for complications to receive complication data and open the provider chooser. -->
+    <uses-permission android:name="com.google.android.wearable.permission.RECEIVE_COMPLICATION_DATA" />
+
+    <uses-feature android:name="android.hardware.type.watch" />
+
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_watch_round"
         android:label="@string/app_name"
-        android:supportsRtl="true"
-        android:theme="@android:style/Theme.DeviceDefault"
         android:requestLegacyExternalStorage="true"
-        >
-        <service
-            android:name=".sensors.RecordService"
-            android:enabled="true"
-            android:exported="true"
-            android:stopWithTask="false"/>
-
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.DeviceDefault">
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
+        <service
+            android:name=".watchfaces.ActivityWatchFace"
+            android:exported="true"
+            android:label="@string/watchface_name"
+            android:permission="android.permission.BIND_WALLPAPER">
 
-        <receiver android:name=".sensors.RecurrentSave"
-            android:enabled="true"/>
-        <receiver android:name=".sensors.RecordServiceStarter"
-            android:enabled="true"/>
+            <meta-data
+                android:name="android.service.wallpaper.square_mode"
+                android:value="false" />
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/watch_face" />
+            <meta-data
+                android:name="com.google.android.wearable.watchface.preview"
+                android:resource="@drawable/watchface" />
+            <meta-data
+                android:name="com.google.android.wearable.watchface.preview_circular"
+                android:resource="@drawable/watchface" />
+
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+
+                <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
+            </intent-filter>
+        </service>
+
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+
+        <service
+            android:name=".services.RecordService"
+            android:enabled="true"
+            android:exported="true"
+            android:stopWithTask="false" />
+
+        <receiver
+            android:name=".broadcastreceivers.RecurrentSave"
+            android:enabled="true" />
+        <receiver
+            android:name=".broadcastreceivers.RecordServiceStarter"
+            android:enabled="true" />
 
         <activity
             android:name=".activities.MainActivity"
@@ -42,8 +76,13 @@
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity
+            android:name=".activities.SensorsActivity"
+            android:exported="true">
         </activity>
     </application>
 

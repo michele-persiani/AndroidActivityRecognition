@@ -1,4 +1,4 @@
-package umu.software.activityrecognition.sensors;
+package umu.software.activityrecognition.services;
 
 import android.annotation.SuppressLint;
 import android.app.PendingIntent;
@@ -20,6 +20,9 @@ import java.util.concurrent.Callable;
 import umu.software.activityrecognition.R;
 import umu.software.activityrecognition.common.lifecycles.ForegroundServiceLifecycle;
 import umu.software.activityrecognition.common.lifecycles.LifecyclesService;
+import umu.software.activityrecognition.broadcastreceivers.RecordServiceStarter;
+import umu.software.activityrecognition.broadcastreceivers.RecurrentSave;
+import umu.software.activityrecognition.sensors.UserSpeechPrompts;
 import umu.software.activityrecognition.sensors.persistence.Persistence;
 import umu.software.activityrecognition.sensors.accumulators.Accumulators;
 import umu.software.activityrecognition.sensors.accumulators.SensorAccumulatorManager;
@@ -36,6 +39,8 @@ import umu.software.activityrecognition.sensors.accumulators.SensorAccumulatorMa
  */
 public class RecordService extends LifecyclesService
 {
+
+
     public static class RecordBinder extends Binder
     {
         private final RecordService service;
@@ -49,21 +54,30 @@ public class RecordService extends LifecyclesService
         }
     }
 
-
     public static final String ACTION_START_RECORDING = "RecordService.ACTION_START_RECORDING";
     public static final String ACTION_STOP_RECORDING = "RecordService.ACTION_STOP_RECORDING";
     public static final String ACTION_SAVE_ZIP_CLEAR = "RecordService.ACTION_SAVE_TO_FILE";
+    public static final String ACTION_PROMPT_USER_CLASSIFICATION = "RecordService.ACTION_PROMPT_USER_CLASSIFICATION";
+    public static final String ACTION_CLEAR_USER_CLASSIFICATION = "RecordService.ACTION_CLEAR_USER_CLASSIFICATION";
 
 
-    public static final String EXTRA_RECURRENT_SAVE_SECS = "RecordService.ACTION_ZIP_FILES";
+    public static final String EXTRA_RECURRENT_SAVE_SECS = "RecordService.ACTION_ZIP_FILES_EVERY_SECS";
     public static final int DEFAULT_RECURRENT_SAVE_SECS = 60;
 
 
+    private boolean mRunning = false;
     boolean mRestartOnDestroy = true;
 
-    SensorAccumulatorManager mAccumulatorManager = Accumulators.newAccumulatorManager(Accumulators.newFactory());
+    SensorAccumulatorManager mAccumulatorManager = Accumulators.newAccumulatorManager(
+            Accumulators.newFactory((acc) -> {
+                acc.consumers().add((sensorEvent, row) -> {
+                    String activity = UserSpeechPrompts.USER_ACTIVITY_CLASSIFICATION.getLastAnswer();
+                    row.put("classification", activity);
+                });
+            })
+    );
 
-    ForegroundServiceLifecycle foregroundLifecycle;
+    ForegroundServiceLifecycle mForegroundLifecycle;
 
 
 
@@ -72,7 +86,7 @@ public class RecordService extends LifecyclesService
     public void onCreate()
     {
         super.onCreate();
-        foregroundLifecycle = new ForegroundServiceLifecycle(
+        mForegroundLifecycle = new ForegroundServiceLifecycle(
             140000,
             this.getString(R.string.notification_title),
             builder -> {
@@ -95,8 +109,12 @@ public class RecordService extends LifecyclesService
                         .setVibrate(new long[]{0L, 0L, 0L});
             }
         );
-        addLifecycleElement(mAccumulatorManager);
-        addLifecycleElement(foregroundLifecycle);
+
+
+        addLifecycleElement(mForegroundLifecycle);
+        addLifecycleElement(UserSpeechPrompts.USER_ACTIVITY_CLASSIFICATION);
+
+
         mRestartOnDestroy = true;
     }
 
@@ -104,28 +122,38 @@ public class RecordService extends LifecyclesService
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
+        super.onStartCommand(intent, flags, startId);
         Log.i(RecordService.class.getName(),
                 String.format("RecordService: onStartCommand() -> %s", (intent != null)? intent.toString() : "null")
         );
-        super.onStartCommand(intent, flags, startId);
 
         String action = intent == null? ACTION_START_RECORDING : intent.getAction();
 
         switch (action)
         {
-            case RecordService.ACTION_START_RECORDING: /* Since the accumulators are already handled by the lifecycle manager we only need to restart RecurrentSave */
+            case RecordService.ACTION_START_RECORDING:
+                addLifecycleElement(mAccumulatorManager);
                 RecurrentSave.stop(this);
                 int saveDelay = intent == null? DEFAULT_RECURRENT_SAVE_SECS : intent.getIntExtra(EXTRA_RECURRENT_SAVE_SECS, DEFAULT_RECURRENT_SAVE_SECS);
                 RecurrentSave.start(this, saveDelay);
+                mRunning = true;
                 break;
             case RecordService.ACTION_STOP_RECORDING:
+                mRunning = false;
                 mRestartOnDestroy = false;
                 saveZipClearSensorsFiles();
                 RecurrentSave.stop(this);
                 stopSelf();
                 break;
             case RecordService.ACTION_SAVE_ZIP_CLEAR:
-                saveZipClearSensorsFiles();
+                if (mRunning)
+                    saveZipClearSensorsFiles();
+                break;
+            case RecordService.ACTION_PROMPT_USER_CLASSIFICATION:
+                requestUserClassification();
+                break;
+            case RecordService.ACTION_CLEAR_USER_CLASSIFICATION:
+                clearUserClassification();
                 break;
             default:
                 Log.w(RecordService.class.getName(),
@@ -147,9 +175,7 @@ public class RecordService extends LifecyclesService
         super.onDestroy();
         saveZipClearSensorsFiles();
         if (mRestartOnDestroy)
-        {
             RecordServiceStarter.broadcast(this);
-        }
     }
 
 
@@ -174,7 +200,7 @@ public class RecordService extends LifecyclesService
     public Callable<Integer[]> saveZipClearSensorsFiles()
     {
         Callable<Integer> save   = saveSensorsFiles();
-        Callable<Integer> zip    = incrementalZipSensorsFiles();
+        Callable<Integer> zip    = createIncrementalZipSensorsFiles();
         Callable<Integer> delete = clearSensorsFiles();
         return () -> new Integer[]{save.call(), zip.call(), delete.call()};
     }
@@ -200,7 +226,7 @@ public class RecordService extends LifecyclesService
      * @return A Callable to access the result of the operation.
      * The operation performs even if this method is not called.
      */
-    public Callable<Integer> incrementalZipSensorsFiles()
+    public Callable<Integer> createIncrementalZipSensorsFiles()
     {
         return Persistence.INSTANCE.createIncrementalZip(mAccumulatorManager.getAccumulators().values());
     }
@@ -231,7 +257,22 @@ public class RecordService extends LifecyclesService
     }
 
 
+    /**
+     * Requests the user to classify the activity he's performing using speech. The recorded speech
+     * will be appended to the sensor dataframes
+     */
+    public void requestUserClassification()
+    {
+        UserSpeechPrompts.USER_ACTIVITY_CLASSIFICATION.prompt();
+    }
 
+    /**
+     * Clear the last classification of the activity provided by the user
+     */
+    public void clearUserClassification()
+    {
+        UserSpeechPrompts.USER_ACTIVITY_CLASSIFICATION.clearLastAnswer();
+    }
 
     // Helper functions to start the service
 
@@ -262,6 +303,7 @@ public class RecordService extends LifecyclesService
         return intent;
     }
 
+
     /**
      * Start this service as a Service or ForegroundService depending on the system's version.
      * Use DEFAULT_RECURRENT_SAVE_SECS as seconds for the recurrent save
@@ -270,7 +312,7 @@ public class RecordService extends LifecyclesService
      */
     public static ComponentName start(Context context)
     {
-        return start(context, DEFAULT_RECURRENT_SAVE_SECS);
+        return start(context, RecordService.DEFAULT_RECURRENT_SAVE_SECS);
     }
 
 
@@ -283,14 +325,15 @@ public class RecordService extends LifecyclesService
      */
     public static ComponentName start(Context context, int recurrentSaveSecs)
     {
-        Intent intent = getStartIntent(context, recurrentSaveSecs);
+        Intent intent = RecordService.getStartIntent(context, recurrentSaveSecs);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
         {
-            ContextCompat.startForegroundService(context, getStartIntent(context));
+            ContextCompat.startForegroundService(context, intent);
             return new ComponentName(context, RecordService.class);
         }
-        return context.startService(intent);
+        else
+            return context.startService(intent);
     }
 
     /**
@@ -301,20 +344,20 @@ public class RecordService extends LifecyclesService
     public static boolean stop(Context context)
     {
         Intent intent = new Intent(context, RecordService.class);
-        intent.setAction(ACTION_STOP_RECORDING);
+        intent.setAction(RecordService.ACTION_STOP_RECORDING);
         return context.stopService(intent);
     }
 
     /**
      * Bind the service with the given ServiceConnection
-     * @param context
-     * @param connection
+     * @param context the calling context
+     * @param connection the ServiceConnection to use
      * @return whether the service got bound
      */
     public static boolean bind(Context context, ServiceConnection connection)
     {
         Intent intent = new Intent(context, RecordService.class);
-        return context.bindService(intent, connection, BIND_AUTO_CREATE);
+        return context.bindService(intent, connection, RecordService.BIND_AUTO_CREATE);
     }
 
     /**
@@ -325,9 +368,32 @@ public class RecordService extends LifecyclesService
     public static ComponentName saveZipClearFiles(Context context)
     {
         Intent intent = new Intent(context, RecordService.class);
-        intent.setAction(ACTION_SAVE_ZIP_CLEAR);
+        intent.setAction(RecordService.ACTION_SAVE_ZIP_CLEAR);
+        return context.startService(intent);
+    }
+
+    /**
+     * Request the user to classify its crrent activity
+     * @param context th calling context
+     * @return
+     */
+    public static ComponentName requestUserClassification(Context context)
+    {
+        Intent intent = new Intent(context, RecordService.class);
+        intent.setAction(RecordService.ACTION_PROMPT_USER_CLASSIFICATION);
         return context.startService(intent);
     }
 
 
+    /**
+     * Clear the previously given activity classification of the user
+     * @param context the calling context
+     * @return
+     */
+    public static ComponentName clearUserClassification(Context context)
+    {
+        Intent intent = new Intent(context, RecordService.class);
+        intent.setAction(RecordService.ACTION_CLEAR_USER_CLASSIFICATION);
+        return context.startService(intent);
+    }
 }

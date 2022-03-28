@@ -39,6 +39,12 @@ public class SensorAccumulatorManager implements LifecycleElement
         this.mFactory = factory;
     }
 
+    public SensorAccumulatorManager(Factory<SensorAccumulator> factory)
+    {
+        this.mDelay = SensorManager.SENSOR_DELAY_NORMAL;
+        this.mFactory = factory;
+    }
+
     /**
      * Initialize the manager by fetching the available sensors from the system
      * @param context the Android context. Usually an Activity or Service

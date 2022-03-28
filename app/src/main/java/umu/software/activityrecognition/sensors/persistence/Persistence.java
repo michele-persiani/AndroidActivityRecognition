@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.Callable;
 
-import umu.software.activityrecognition.permissions.Permissions;
+import umu.software.activityrecognition.common.permissions.Permissions;
 import umu.software.activityrecognition.sensors.persistence.tasks.DeleteFolderAsynTask;
 import umu.software.activityrecognition.sensors.persistence.tasks.SensorDeleteFileAsyncTask;
 import umu.software.activityrecognition.sensors.persistence.tasks.SensorFileWriterAsyncTask;

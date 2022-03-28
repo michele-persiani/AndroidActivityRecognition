@@ -18,21 +18,20 @@ public class DataFrame extends LinkedHashMap<String, Series>
 
     private ReentrantLock semaphore;
 
-    public DataFrame(String... columns)
+    public DataFrame()
     {
         semaphore = new ReentrantLock();
-        setColumns(columns);
     }
 
-    private void setColumns(String[] columns)
+    public boolean hasColumn(String column)
     {
-        for (String col : columns)
-            this.put(col, new Series());
+        return withLock(dataFrame -> Arrays.asList(columns()).contains(column));
     }
+
 
     public String[] columns()
     {
-        return keySet().toArray(new String[size()]);
+        return withLock(dataFrame -> keySet().toArray(new String[size()]));
     }
 
 
@@ -41,10 +40,12 @@ public class DataFrame extends LinkedHashMap<String, Series>
         withLock(dataFrame -> {
             LinkedHashMap<String, Series> tmp = new LinkedHashMap<>(this);
             clear();
-            for (String col : columns) {
-                put(col, tmp.get(tmp));
-                tmp.remove(col);
-            }
+            for (String col : columns)
+                if (tmp.containsKey(col))
+                {
+                    put(col, tmp.get(col));
+                    tmp.remove(col);
+                }
             for (String col : tmp.keySet())
                 put(col, tmp.get(col));
             return null;
@@ -52,7 +53,7 @@ public class DataFrame extends LinkedHashMap<String, Series>
     }
 
 
-    public Map<String, Double> mean ()
+    public Map<String, Double> mean()
     {
         return withLock(dataFrame -> {
             Map<String, Double> meanDataFrame = new LinkedHashMap<>();
@@ -63,7 +64,7 @@ public class DataFrame extends LinkedHashMap<String, Series>
         });
     }
 
-    public Map<String, Double> std ()
+    public Map<String, Double> std()
     {
         return withLock(dataFrame -> {
             Map<String, Double> meanDataFrame = new LinkedHashMap<>();
@@ -77,7 +78,7 @@ public class DataFrame extends LinkedHashMap<String, Series>
     public int countRows()
     {
         return withLock(dataFrame -> {
-            if (entrySet().size() == 0)
+            if (size() == 0)
                 return 0;
             Entry<String, Series> entry = this.entrySet().iterator().next();
             Series value = entry.getValue();
@@ -88,21 +89,27 @@ public class DataFrame extends LinkedHashMap<String, Series>
     public int appendRow(Map<String, Object> row)
     {
         return withLock(dataFrame -> {
-            if (columns().length == 0)
+
+            int size = size();
+            for (String col : row.keySet())
+                if (!hasColumn(col))
+                    put(col, Series.fillSeries(size, this::nullElement));
+
+            for (String col : row.keySet())
             {
-                String[] cols = Arrays.copyOf(row.keySet().toArray(), row.keySet().size(), String[].class);
-                setColumns(cols);
+                Object cell = row.getOrDefault(col, nullElement());
+                cell = (cell == null)? nullElement() : cell;
+                get(col).add(cell);
             }
-
-            if (row.size() != columns().length)
-                throw new RuntimeException("DataFrame: row.size() != columns.length");
-
-            for (Entry<String, Object> e : row.entrySet())
-                get(e.getKey()).add(e.getValue());
 
             return countRows() - 1;
 
         });
+    }
+
+    public Object nullElement()
+    {
+        return "";
     }
 
     public Map<String, Object> popRow(int rowNum)
@@ -112,7 +119,7 @@ public class DataFrame extends LinkedHashMap<String, Series>
                 return null;
 
             Map<String, Object> res = new LinkedHashMap<>();
-            for (Entry<String, Series> e : entrySet())
+            for (Entry<String, Series> e : this.entrySet())
                 res.put(e.getKey(), e.getValue().remove(rowNum));
             return res;
         });
@@ -131,14 +138,16 @@ public class DataFrame extends LinkedHashMap<String, Series>
     }
 
 
-    public Object[] getRow(int n)
+    public Object[] getRowArray(int rowNum)
     {
         return withLock(dataFrame -> {
+            if (rowNum < 0 || rowNum > countRows())
+                return null;
             Object[] row = new Object[columns().length];
             int i = 0;
             for (String col : columns())
             {
-                Object value = this.get(col).get(n);
+                Object value = this.get(col).get(rowNum);
                 row[i] = value;
                 i ++;
             }
@@ -152,7 +161,7 @@ public class DataFrame extends LinkedHashMap<String, Series>
             ArrayList<R> result = new ArrayList<>();
             for (int i = 0; i < countRows(); i++)
             {
-                Object[] row = getRow(i);
+                Object[] row = getRowArray(i);
                 result.add(fun.apply(row));
             }
 
@@ -174,7 +183,7 @@ public class DataFrame extends LinkedHashMap<String, Series>
     public DataFrame clone()
     {
         return withLock(dataFrame -> {
-            DataFrame clone = new DataFrame(columns().clone());
+            DataFrame clone = new DataFrame();
             forEach((k, v) -> clone.put(k, v.clone()));
             return clone;
         });
@@ -200,9 +209,10 @@ public class DataFrame extends LinkedHashMap<String, Series>
 
     private static void addCSVStringsToBuilder(StringBuilder builder, Object[] objs)
     {
+        if (objs.length == 0)
+            return;
         for (int i = 0; i < objs.length - 1; i++)
             builder.append(objs[i].toString()).append(",");
-
         builder.append(objs[objs.length-1]);
         builder.append(System.lineSeparator());
     }

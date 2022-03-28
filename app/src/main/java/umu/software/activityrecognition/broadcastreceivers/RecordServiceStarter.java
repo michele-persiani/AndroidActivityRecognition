@@ -1,8 +1,10 @@
-package umu.software.activityrecognition.sensors;
+package umu.software.activityrecognition.broadcastreceivers;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+
+import umu.software.activityrecognition.services.RecordService;
 
 
 /**

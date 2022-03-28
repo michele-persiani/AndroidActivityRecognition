@@ -6,7 +6,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import umu.software.activityrecognition.persistence.FileWriterAsyncTask;
+import umu.software.activityrecognition.common.persistence.FileWriterAsyncTask;
 import umu.software.activityrecognition.sensors.accumulators.SensorAccumulator;
 
 public class SensorFileWriterAsyncTask extends FileWriterAsyncTask<SensorAccumulator>

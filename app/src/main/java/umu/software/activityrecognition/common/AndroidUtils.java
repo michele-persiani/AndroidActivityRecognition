@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.hardware.SensorManager;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -19,12 +20,30 @@ import java.io.InputStream;
 public class AndroidUtils
 {
 
+
+    /* Handlers */
+
     public static Handler newHandler(String name)
     {
         HandlerThread handlerThread = new HandlerThread(name);
         handlerThread.start();
         return new Handler(handlerThread.getLooper());
     }
+
+    public static Handler newMainLooperHandler()
+    {
+        return new Handler(Looper.getMainLooper());
+    }
+
+
+
+
+
+
+
+
+
+    /* System services */
 
 
     public static SensorManager getSensorManager(Context context)
@@ -43,6 +62,14 @@ public class AndroidUtils
     {
         return (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
     }
+
+
+
+
+
+
+
+    /* Files utils */
 
     /**
      * Moves a file from the Assets folder to the temporary cache directory.

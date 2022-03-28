@@ -2,7 +2,7 @@ package umu.software.activityrecognition.sensors.persistence.tasks;
 
 import java.io.File;
 
-import umu.software.activityrecognition.persistence.DeleteFileAsyncTask;
+import umu.software.activityrecognition.common.persistence.DeleteFileAsyncTask;
 import umu.software.activityrecognition.sensors.accumulators.SensorAccumulator;
 
 public class SensorDeleteFileAsyncTask extends DeleteFileAsyncTask<SensorAccumulator>

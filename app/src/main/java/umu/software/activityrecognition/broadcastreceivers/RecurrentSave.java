@@ -1,4 +1,4 @@
-package umu.software.activityrecognition.sensors;
+package umu.software.activityrecognition.broadcastreceivers;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.util.Log;
 
 import umu.software.activityrecognition.common.AndroidUtils;
+import umu.software.activityrecognition.services.RecordService;
 
 /**
  * BroadcastReceiver that calls that AlarmManager to invoke itself. At every invocation it will
@@ -19,7 +20,7 @@ public class RecurrentSave extends BroadcastReceiver
     @Override
     public void onReceive(Context context, Intent intent)
     {
-        Log.i(RecordService.class.getName(), "RecurrentSave onReceive()");
+        Log.i(RecurrentSave.class.getName(), "RecurrentSave onReceive()");
         RecordService.saveZipClearFiles(context);
     }
 
@@ -41,7 +42,6 @@ public class RecurrentSave extends BroadcastReceiver
      */
     public static void start(Context context, long intervalSeconds)
     {
-
         AndroidUtils
                 .getAlarmManager(context)
                 .setInexactRepeating(
@@ -58,14 +58,7 @@ public class RecurrentSave extends BroadcastReceiver
      */
     public static void start(Context context)
     {
-        AndroidUtils
-                .getAlarmManager(context)
-                .setInexactRepeating(
-                        AlarmManager.RTC,
-                        System.currentTimeMillis(),
-                        600 * 1000, // 10 minutes
-                        getRepeatingIntent(context)
-                );
+        start(context, 600);
     }
 
     /**

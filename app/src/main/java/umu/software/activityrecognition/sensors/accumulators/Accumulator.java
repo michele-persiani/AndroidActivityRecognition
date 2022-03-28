@@ -8,6 +8,8 @@ import com.google.common.collect.Lists;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -16,18 +18,17 @@ import java.util.function.Function;
 public abstract class Accumulator<T> implements Consumer<T>
 {
     private final ReentrantLock lock = new ReentrantLock();
-    private Function<T, Boolean> state;
 
     protected DataFrame dataframe;
-    protected List<BiConsumer<T, DataFrame.Row>> consumers;
+    protected Queue<BiConsumer<T, DataFrame.Row>> consumers;
 
     public Accumulator()
     {
-        state = unitializedState();
         dataframe = new DataFrame();
+        consumers  = new ConcurrentLinkedQueue<>(initializeConsumers());
     }
 
-    public List<BiConsumer<T, DataFrame.Row>> consumers()
+    public Queue<BiConsumer<T, DataFrame.Row>> consumers()
     {
         return consumers;
     }
@@ -35,13 +36,20 @@ public abstract class Accumulator<T> implements Consumer<T>
     @Override
     public void accept(T event)
     {
-        state.apply(event);
+        lock.lock();
+        DataFrame.Row row = new DataFrame.Row();
+        consumers.forEach(c -> c.accept(event, row));
+
+        dataframe.appendRow(row);
+        lock.unlock();
     }
 
 
     public void reset()
     {
-        state = unitializedState();
+        lock.lock();
+        dataframe = new DataFrame();
+        lock.unlock();
     }
 
 
@@ -60,33 +68,7 @@ public abstract class Accumulator<T> implements Consumer<T>
     }
 
 
-
     protected abstract List<BiConsumer<T, DataFrame.Row>> initializeConsumers();
 
-
-    protected Function<T, Boolean> unitializedState()
-    {
-
-        return event -> {
-            consumers = initializeConsumers();
-            dataframe = new DataFrame();
-            state = initializedState();
-            accept(event);
-            return true;
-        };
-
-    }
-
-    protected Function<T, Boolean> initializedState()
-    {
-        return event -> {
-            lock.lock();
-            DataFrame.Row row = new DataFrame.Row();
-            consumers.forEach(c -> c.accept(event, row));
-            dataframe.appendRow(row);
-            lock.unlock();
-            return true;
-        };
-    }
 
 }

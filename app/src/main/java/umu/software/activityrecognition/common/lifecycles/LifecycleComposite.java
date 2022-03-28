@@ -12,40 +12,42 @@ public class LifecycleComposite implements LifecycleElement
     private LifecycleElement.LifecycleState mState = LifecycleElement.LifecycleState.DESTROYED;
 
 
-    public void addLifecycleElement(Context context, LifecycleElement component)
+    public void addLifecycleElement(Context context, LifecycleElement element)
     {
-        switch (mState)
-        {
-            case DESTROYED:
-            case CREATED:
-                component.onCreate(context);
-            case STARTED:
-                component.onCreate(context);
-                component.onStart(context);
-            case STOPPED:
-                component.onCreate(context);
-            default:
-                mElements.add(component);
-        }
-    }
-
-
-    public void removeLifecycleElement(Context context, LifecycleElement component)
-    {
-        if (!mElements.contains(component))
+        if (mElements.contains(element))
             return;
         switch (mState)
         {
             case DESTROYED:
             case CREATED:
-                component.onDestroy(context);
+                element.onCreate(context);
             case STARTED:
-                component.onStop(context);
-                component.onDestroy(context);
+                element.onCreate(context);
+                element.onStart(context);
             case STOPPED:
-                component.onDestroy(context);
+                element.onCreate(context);
             default:
-                mElements.remove(component);
+                mElements.add(element);
+        }
+    }
+
+
+    public void removeLifecycleElement(Context context, LifecycleElement element)
+    {
+        if (!mElements.contains(element))
+            return;
+        switch (mState)
+        {
+            case DESTROYED:
+            case CREATED:
+                element.onDestroy(context);
+            case STARTED:
+                element.onStop(context);
+                element.onDestroy(context);
+            case STOPPED:
+                element.onDestroy(context);
+            default:
+                mElements.remove(element);
         }
     }
 

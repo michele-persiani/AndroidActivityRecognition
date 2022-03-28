@@ -13,23 +13,25 @@ import umu.software.activityrecognition.common.Factory;
 import umu.software.activityrecognition.sensors.accumulators.Accumulators;
 import umu.software.activityrecognition.sensors.accumulators.SensorAccumulator;
 
-public class PredictFromAccumulator extends PredictTemplate
+
+/**
+ * Implementation of the predict template that uses the accumulators
+ */
+public class PredictFromAccumulator extends TensorflowLitePredictTemplate
 {
 
     Map<Integer, SensorAccumulator> accumulators;            // Map (tensor_num, accumulator)
-    Map<Integer, String> sensorMappings;                     // Map (tensor_num, sensor_name)
     Map<Integer, String[]> inputMappings;                    // Map (tensor_num, sensor_columns)
 
     public PredictFromAccumulator(Interpreter interpreter)
     {
         super(interpreter);
         accumulators = Maps.newHashMap();
-        sensorMappings = Maps.newHashMap();
         inputMappings = Maps.newHashMap();
     }
 
     @Override
-    protected boolean isReady()
+    protected boolean isInputReady()
     {
         if (accumulators.size() < interpreter.getInputTensorCount())
             return false;
@@ -48,28 +50,27 @@ public class PredictFromAccumulator extends PredictTemplate
 
         DataFrame df = getDataFrame(tensorNum);
 
-        final int[] added = {0};
+        final int[] addedRows = {0};
         df.forEachRow(objects -> {
-            if (added[0] >= inputSequenceLength(tensorNum))
+            if (addedRows[0] >= inputSequenceLength(tensorNum))
                 return null;
             for (Object o : objects) {
                 buffer.put(Float.parseFloat(o.toString()));
             }
-            added[0] += 1;
+            addedRows[0] += 1;
             return null;
         });
 
 
     }
 
-    public SensorAccumulator setAccumulator(int tensorNum, String sensorName, String[] columns)
+    public SensorAccumulator setAccumulator(int tensorNum, String[] columns)
     {
         Factory<SensorAccumulator> factory = Accumulators.newSlideWindowFactory(
                 inputSequenceLength(tensorNum)
         );
         SensorAccumulator accum = factory.make();
         accumulators.put(tensorNum, accum);
-        sensorMappings.put(tensorNum, sensorName);
         inputMappings.put(tensorNum, columns);
         return accum;
     }

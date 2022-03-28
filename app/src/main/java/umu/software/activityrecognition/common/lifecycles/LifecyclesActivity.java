@@ -5,6 +5,9 @@ import android.os.Bundle;
 
 import androidx.annotation.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class LifecyclesActivity extends Activity
 {
     private LifecycleComposite mLifecycles = new LifecycleComposite();
@@ -33,6 +36,10 @@ public class LifecyclesActivity extends Activity
     {
         super.onStart();
         mLifecycles.onStart(this);
+        List<LifecycleElement> elements = new ArrayList<>();
+        populateLifecycles(elements);
+        for(LifecycleElement e : elements)
+            addLifecycleElement(e);
     }
 
     @Override
@@ -47,5 +54,10 @@ public class LifecyclesActivity extends Activity
     {
         super.onDestroy();
         mLifecycles.onDestroy(this);
+    }
+
+    protected void populateLifecycles(List<LifecycleElement> elements)
+    {
+
     }
 }

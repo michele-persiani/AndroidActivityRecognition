@@ -53,12 +53,6 @@ public class SensorAccumulator extends Accumulator<SensorEvent> implements Senso
         return sensor;
     }
 
-    @Override
-    protected Function<SensorEvent, Boolean> unitializedState()
-    {
-        return super.unitializedState();
-    }
-
 
     @SuppressLint("DefaultLocale")
     @Override

@@ -19,7 +19,7 @@ import umu.software.activityrecognition.common.lifecycles.LifecycleElement;
 import umu.software.activityrecognition.common.AndroidUtils;
 
 
-public enum TFLiteModel implements LifecycleElement
+public enum SensorTensorflowLiteModels implements LifecycleElement
 {
 
     ENCODER_GRAVITY("encoder.tflite",
@@ -57,7 +57,7 @@ public enum TFLiteModel implements LifecycleElement
     private final InputTensorsDefinition tensorDefinition;
 
 
-    TFLiteModel(String filePath, int samplingDelay, InputTensorsDefinition tensorsDefinition)
+    SensorTensorflowLiteModels(String filePath, int samplingDelay, InputTensorsDefinition tensorsDefinition)
     {
         this.filePath = filePath;
         this.samplingDelay = samplingDelay;
@@ -67,7 +67,8 @@ public enum TFLiteModel implements LifecycleElement
     @Override
     public void onCreate(Context context)
     {
-        initialized = false;
+        if (initialized)
+            return;
         MappedByteBuffer model;
         try {
             model = loadModelFile(context, filePath);
@@ -88,13 +89,13 @@ public enum TFLiteModel implements LifecycleElement
     public void onStart(Context context)
     {
         if(initialized)
-            registerSensorListeners(context);
+            registerAccumulators(context);
     }
 
     @Override
     public void onStop(Context context)
     {
-        unregisterSensorListeners(context);
+        unregisterAccumulators(context);
     }
 
     @Override
@@ -121,14 +122,13 @@ public enum TFLiteModel implements LifecycleElement
         String[] columns;
         for (int i = 0; i < tensorDefinition.size(); i++)
         {
-            String sensorName = tensorDefinition.get(i).first;
             columns = tensorDefinition.get(i).second;
-            template.setAccumulator(i, sensorName, columns);
+            template.setAccumulator(i, columns);
         }
 
     }
 
-    private void registerSensorListeners(Context context)
+    private void registerAccumulators(Context context)
     {
         SensorManager sensorManager = AndroidUtils.getSensorManager(context);
         template.forEachAccumulator((inputNum, accum) -> {
@@ -138,10 +138,9 @@ public enum TFLiteModel implements LifecycleElement
             assert sensor != null;
             sensorManager.registerListener(accum, sensor, samplingDelay, handler);
         });
-
     }
 
-    private void unregisterSensorListeners(Context context)
+    private void unregisterAccumulators(Context context)
     {
         SensorManager sensorManager = AndroidUtils.getSensorManager(context);
         template.forEachAccumulator((inputNum, accum) -> {

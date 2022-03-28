@@ -1,4 +1,4 @@
-package umu.software.activityrecognition.sensors;
+package umu.software.activityrecognition.services;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -15,7 +15,6 @@ public class RecordServiceConnection implements ServiceConnection
     Function<RecordService, ?> mCallback = null;
 
 
-
     public RecordServiceConnection(Function<RecordService, ?> callback)
     {
         setCallback(callback);
@@ -24,7 +23,6 @@ public class RecordServiceConnection implements ServiceConnection
 
     public RecordServiceConnection()
     {
-
     }
 
 
@@ -35,9 +33,7 @@ public class RecordServiceConnection implements ServiceConnection
         mService = ((RecordService.RecordBinder) iBinder).getService();
 
         if (mCallback != null)
-        {
             mCallback.apply(mService);
-        }
     }
 
     @Override
@@ -63,9 +59,7 @@ public class RecordServiceConnection implements ServiceConnection
     public <T> T apply(Function<RecordService, T> operation)
     {
         if (!isConnected())
-        {
             return null;
-        }
         return operation.apply(mService);
     }
 

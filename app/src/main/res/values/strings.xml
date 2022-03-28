@@ -4,4 +4,6 @@
     <string name="notification_title">Activity Recognition</string>
     <string name="notification_text">Recording from sensors</string>
     <string name="notification_channel_id">Activity Recognition</string>
+    <string name="request_user_classification">What are you doing?</string>
+    <string name="watchface_name">Activity Recognition</string>
 </resources>

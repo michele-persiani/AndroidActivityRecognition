@@ -1,5 +1,6 @@
-package umu.software.activityrecognition.permissions;
+package umu.software.activityrecognition.common.permissions;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -10,7 +11,8 @@ import androidx.core.content.ContextCompat;
 public enum Permissions
 {
     READ_EXTERNAL_STORAGE (android.Manifest.permission.READ_EXTERNAL_STORAGE),
-    WRITE_EXTERNAL_STORAGE (android.Manifest.permission.WRITE_EXTERNAL_STORAGE) ;
+    WRITE_EXTERNAL_STORAGE (android.Manifest.permission.WRITE_EXTERNAL_STORAGE),
+    RECORD_AUDIO(Manifest.permission.RECORD_AUDIO);
 
 
     public static int REQUEST_CODE = 180000;
