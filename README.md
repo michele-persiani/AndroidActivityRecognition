@@ -13,9 +13,9 @@ Main Components:
   - **RecordServiceStarter**: starter for the RecordService. Used to restart the service if the system shuts it down
   - **Persistance**: class for saving on external files the current state of SensorAccumulatorManager
   - **RecurrentSave**: this component recurrently saves RecordService readings
-  - **TensorflowLiteModels**: Singleton tensorflow models that uses sensors.
+  - **TensorflowLiteModels**: Singleton tensorflow models that uses sensors
 
 
 Author: **Michele Persiani**, michelep@cs.umu.se
 
-**Copiright of Umea University**
+**Copiright of Umea University**.
