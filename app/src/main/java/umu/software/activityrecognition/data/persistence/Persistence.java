@@ -1,4 +1,4 @@
-package umu.software.activityrecognition.sensors.persistence;
+package umu.software.activityrecognition.data.persistence;
 
 import android.app.Activity;
 import android.os.Environment;
@@ -9,15 +9,15 @@ import java.util.Collection;
 import java.util.concurrent.Callable;
 
 import umu.software.activityrecognition.common.permissions.Permissions;
-import umu.software.activityrecognition.sensors.persistence.tasks.DeleteFolderAsynTask;
-import umu.software.activityrecognition.sensors.persistence.tasks.SensorDeleteFileAsyncTask;
-import umu.software.activityrecognition.sensors.persistence.tasks.SensorFileWriterAsyncTask;
-import umu.software.activityrecognition.sensors.persistence.tasks.SensorIncrementalZipAsyncTask;
-import umu.software.activityrecognition.sensors.accumulators.SensorAccumulator;
+import umu.software.activityrecognition.data.persistence.tasks.DeleteFolderAsynTask;
+import umu.software.activityrecognition.data.persistence.tasks.SensorDeleteFileAsyncTask;
+import umu.software.activityrecognition.data.persistence.tasks.SensorFileWriterAsyncTask;
+import umu.software.activityrecognition.data.persistence.tasks.SensorIncrementalZipAsyncTask;
+import umu.software.activityrecognition.data.accumulators.SensorAccumulator;
 
 public enum Persistence
 {
-    INSTANCE (
+    DOCUMENTS_FOLDER(
             String.format(
                     "%s%s%s",
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).getAbsolutePath(),
@@ -25,7 +25,6 @@ public enum Persistence
                     "Sensor Readings"
             )
     );
-
 
 
     private final String sensorFolder;

@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -11,6 +12,7 @@ import android.speech.SpeechRecognizer;
 import java.util.List;
 import java.util.Locale;
 
+import umu.software.activityrecognition.common.AndroidUtils;
 import umu.software.activityrecognition.common.lifecycles.LifecycleElement;
 import umu.software.activityrecognition.common.permissions.Permissions;
 
@@ -28,6 +30,9 @@ public enum ASR implements LifecycleElement
     private final String mLanguageModel;
 
     private SpeechRecognizer mSpeechRecognizer;
+    private Handler mHandler = AndroidUtils.newMainLooperHandler();
+
+    private Locale mLocale = Locale.getDefault();
 
     ASR(String languageModel)
     {
@@ -67,6 +72,13 @@ public enum ASR implements LifecycleElement
         Permissions.RECORD_AUDIO.askPermission(activity);
     }
 
+
+    public ASR setLocale(Locale locale)
+    {
+        mLocale = locale;
+        return this;
+    }
+
     /***
      * Start listening from the device.
      * NB. Only one process at a time can be executing startListening(). When a thread finishes
@@ -82,10 +94,12 @@ public enum ASR implements LifecycleElement
         }
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, mLanguageModel);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, mLocale);
 
-        mSpeechRecognizer.setRecognitionListener(listener);
-        mSpeechRecognizer.startListening(intent);
+        mHandler.post(() -> {
+            mSpeechRecognizer.setRecognitionListener(listener);
+            mSpeechRecognizer.startListening(intent);
+        });
     }
 
 
@@ -96,7 +110,7 @@ public enum ASR implements LifecycleElement
     {
         if (mSpeechRecognizer == null)
             return;
-        mSpeechRecognizer.stopListening();
+        mHandler.post(() -> mSpeechRecognizer.stopListening());
     }
 
 

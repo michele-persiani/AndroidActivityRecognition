@@ -1,6 +1,7 @@
 package umu.software.activityrecognition.services;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
@@ -8,6 +9,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.BitmapFactory;
 
+import android.hardware.Sensor;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
@@ -20,22 +22,28 @@ import java.util.concurrent.Callable;
 import umu.software.activityrecognition.R;
 import umu.software.activityrecognition.common.lifecycles.ForegroundServiceLifecycle;
 import umu.software.activityrecognition.common.lifecycles.LifecyclesService;
-import umu.software.activityrecognition.broadcastreceivers.RecordServiceStarter;
 import umu.software.activityrecognition.broadcastreceivers.RecurrentSave;
-import umu.software.activityrecognition.sensors.UserSpeechPrompts;
-import umu.software.activityrecognition.sensors.persistence.Persistence;
-import umu.software.activityrecognition.sensors.accumulators.Accumulators;
-import umu.software.activityrecognition.sensors.accumulators.SensorAccumulatorManager;
+import umu.software.activityrecognition.data.classification.UserSpeechPrompts;
+import umu.software.activityrecognition.data.persistence.Persistence;
+import umu.software.activityrecognition.data.accumulators.SensorAccumulators;
+import umu.software.activityrecognition.data.accumulators.SensorAccumulatorManager;
+import umu.software.activityrecognition.speech.ASR;
 
 
 /**
- * Started Service that records and saves sensor data through a SensorAccumulatorManager
- * It has three possible actions to be set in the Intent:
- *  - RecordService.ACTION_START_RECORDING will start the sensor accumulators
- *  - RecordService.ACTION_STOP_RECORDING will shut down the accumulators
+ * Service that records and saves sensor data through a SensorAccumulatorManager
+ *
+ * It offers the following actions to be set in the Intent:
+ *  - RecordService.ACTION_START_RECORDING will start the sensor accumulators.
+ *  - RecordService.ACTION_STOP_RECORDING will shut down the accumulators.
  *  - RecordService.ACTION_SAVE_TO_FILE will save the accumulator and zip them in an incremental way
- *    bt utilizing the Persistence class
+ *    by utilizing the Persistence class
+ *  - RecordService.ACTION_PROMPT_USER_CLASSIFICATION will prompt the user to classify the activity he's performing.
+ *    The classification will be put together the sensor readings.
+ *  - RecordService.ACTION_CLEAR_USER_CLASSIFICATION will clear the activity classification provided by the user.
+ *
  *  The service also allows binding to directly access its methods
+ *
  */
 public class RecordService extends LifecyclesService
 {
@@ -54,28 +62,24 @@ public class RecordService extends LifecyclesService
         }
     }
 
-    public static final String ACTION_START_RECORDING = "RecordService.ACTION_START_RECORDING";
-    public static final String ACTION_STOP_RECORDING = "RecordService.ACTION_STOP_RECORDING";
-    public static final String ACTION_SAVE_ZIP_CLEAR = "RecordService.ACTION_SAVE_TO_FILE";
-    public static final String ACTION_PROMPT_USER_CLASSIFICATION = "RecordService.ACTION_PROMPT_USER_CLASSIFICATION";
-    public static final String ACTION_CLEAR_USER_CLASSIFICATION = "RecordService.ACTION_CLEAR_USER_CLASSIFICATION";
+    public static final String ACTION_START_RECORDING       = "RecordService.ACTION_START_RECORDING";
+    public static final String ACTION_STOP_RECORDING        = "RecordService.ACTION_STOP_RECORDING";
+    public static final String ACTION_SAVE_ZIP_CLEAR        = "RecordService.ACTION_SAVE_ZIP_CLEAR";
+    public static final String ACTION_PROMPT_CLASSIFICATION = "RecordService.ACTION_PROMPT_CLASSIFICATION";
+    public static final String ACTION_CLEAR_CLASSIFICATION  = "RecordService.ACTION_CLEAR_CLASSIFICATION";
 
 
-    public static final String EXTRA_RECURRENT_SAVE_SECS = "RecordService.ACTION_ZIP_FILES_EVERY_SECS";
-    public static final int DEFAULT_RECURRENT_SAVE_SECS = 60;
+    public static final String EXTRA_RECURRENT_SAVE_SECS = "RecordService.EXTRA_RECURRENT_SAVE_SECS";
+    public static final int DEFAULT_RECURRENT_SAVE_SECS = 900;
+
+    public static final String EXTRA_RECORDED_SENSOR_TYPES = "RecordService.EXTRA_RECORDED_SENSOR_TYPES";
+    public static final int[] DEFAULT_RECORDED_SENSOR_TYPES = new int[]{Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE};
+
+    public static final String EXTRA_MIN_DELAY_MILLIS = "RecordService.EXTRA_MIN_DELAY_MILLIS";
+    public static final long DEFAULT_MIN_DELAY_MILLIS = 50;
 
 
-    private boolean mRunning = false;
-    boolean mRestartOnDestroy = true;
-
-    SensorAccumulatorManager mAccumulatorManager = Accumulators.newAccumulatorManager(
-            Accumulators.newFactory((acc) -> {
-                acc.consumers().add((sensorEvent, row) -> {
-                    String activity = UserSpeechPrompts.USER_ACTIVITY_CLASSIFICATION.getLastAnswer();
-                    row.put("classification", activity);
-                });
-            })
-    );
+    SensorAccumulatorManager mAccumulatorManager;
 
     ForegroundServiceLifecycle mForegroundLifecycle;
 
@@ -114,8 +118,6 @@ public class RecordService extends LifecyclesService
         addLifecycleElement(mForegroundLifecycle);
         addLifecycleElement(UserSpeechPrompts.USER_ACTIVITY_CLASSIFICATION);
 
-
-        mRestartOnDestroy = true;
     }
 
 
@@ -132,27 +134,18 @@ public class RecordService extends LifecyclesService
         switch (action)
         {
             case RecordService.ACTION_START_RECORDING:
-                addLifecycleElement(mAccumulatorManager);
-                RecurrentSave.stop(this);
-                int saveDelay = intent == null? DEFAULT_RECURRENT_SAVE_SECS : intent.getIntExtra(EXTRA_RECURRENT_SAVE_SECS, DEFAULT_RECURRENT_SAVE_SECS);
-                RecurrentSave.start(this, saveDelay);
-                mRunning = true;
+                startRecording(intent);
                 break;
             case RecordService.ACTION_STOP_RECORDING:
-                mRunning = false;
-                mRestartOnDestroy = false;
-                saveZipClearSensorsFiles();
-                RecurrentSave.stop(this);
                 stopSelf();
                 break;
             case RecordService.ACTION_SAVE_ZIP_CLEAR:
-                if (mRunning)
-                    saveZipClearSensorsFiles();
+                saveZipClearSensorsFiles();
                 break;
-            case RecordService.ACTION_PROMPT_USER_CLASSIFICATION:
+            case RecordService.ACTION_PROMPT_CLASSIFICATION:
                 requestUserClassification();
                 break;
-            case RecordService.ACTION_CLEAR_USER_CLASSIFICATION:
+            case RecordService.ACTION_CLEAR_CLASSIFICATION:
                 clearUserClassification();
                 break;
             default:
@@ -173,11 +166,11 @@ public class RecordService extends LifecyclesService
     public void onDestroy()
     {
         super.onDestroy();
+        RecurrentSave.stopRecurrentSave(this);
         saveZipClearSensorsFiles();
-        if (mRestartOnDestroy)
-            RecordServiceStarter.broadcast(this);
+        stopForeground(true);
+        Log.i(getClass().getSimpleName(), "Service destroyed");
     }
-
 
 
     @Override
@@ -187,7 +180,43 @@ public class RecordService extends LifecyclesService
     }
 
 
+    /**
+     * Start recording sensor data
+     * @param intent the intent requesting to start recording, or null. If intent is null we use the default values
+     */
+    public void startRecording(Intent intent)
+    {
+        if(mAccumulatorManager != null)
+            removeLifecycleElement(mAccumulatorManager);
 
+        int[] sensorTypes = intent == null? DEFAULT_RECORDED_SENSOR_TYPES : intent.getIntArrayExtra(EXTRA_RECORDED_SENSOR_TYPES);
+        long minDelayMillis = intent == null? DEFAULT_MIN_DELAY_MILLIS : intent.getLongExtra(EXTRA_MIN_DELAY_MILLIS, DEFAULT_MIN_DELAY_MILLIS);
+        int saveDelay = intent == null? DEFAULT_RECURRENT_SAVE_SECS : intent.getIntExtra(EXTRA_RECURRENT_SAVE_SECS, DEFAULT_RECURRENT_SAVE_SECS);
+
+
+        if (sensorTypes.length == 0)
+        {
+            Log.w(getClass().getSimpleName(), "Number of sensors in zero. Did you forget to set the intent extra?");
+            Log.w(getClass().getSimpleName(), "Stopping self.");
+            stopSelf();
+            return;
+        }
+
+        mAccumulatorManager = SensorAccumulators.newAccumulatorManager(
+                SensorAccumulators.newFactory((acc) -> {
+                    acc.consumers().add((sensorEvent, row) -> {
+                        String activity = UserSpeechPrompts.USER_ACTIVITY_CLASSIFICATION.getLastAnswer();
+                        row.put("classification", activity);
+                    });
+                    acc.setMinDelayMillis(minDelayMillis);
+                }), false, sensorTypes
+        );
+        addLifecycleElement(mAccumulatorManager);
+
+        RecurrentSave.stopRecurrentSave(this);
+        if (saveDelay > 0)
+            RecurrentSave.startRecurrentSave(this, saveDelay);
+    }
 
 
 
@@ -202,7 +231,13 @@ public class RecordService extends LifecyclesService
         Callable<Integer> save   = saveSensorsFiles();
         Callable<Integer> zip    = createIncrementalZipSensorsFiles();
         Callable<Integer> delete = clearSensorsFiles();
-        return () -> new Integer[]{save.call(), zip.call(), delete.call()};
+        return () -> {
+            Integer[] result = new Integer[3];
+            result[0] = save.call();
+            result[1] = zip.call();
+            result[2] = delete.call();
+            return result;
+        };
     }
 
 
@@ -214,21 +249,21 @@ public class RecordService extends LifecyclesService
      */
     public Callable<Integer> saveSensorsFiles()
     {
-        return Persistence.INSTANCE.saveToFile(mAccumulatorManager.getAccumulators().values(), true);
+        return Persistence.DOCUMENTS_FOLDER.saveToFile(mAccumulatorManager.getAccumulators().values(), true);
     }
 
 
     /**
      * Zip the previously saved files relative to the sensor accumulators. Each time this method is called
      * the name of the zip is set in an incremental way: 0.zip, 1.zip, 2.zip, ...  depending on the
-     * numbered zips present in the filder
+     * numbered zips present in the folder
      * The method returns a Callable because Persistence uses AsyncTasks to perform file operations.
      * @return A Callable to access the result of the operation.
      * The operation performs even if this method is not called.
      */
     public Callable<Integer> createIncrementalZipSensorsFiles()
     {
-        return Persistence.INSTANCE.createIncrementalZip(mAccumulatorManager.getAccumulators().values());
+        return Persistence.DOCUMENTS_FOLDER.createIncrementalZip(mAccumulatorManager.getAccumulators().values());
     }
 
 
@@ -240,7 +275,7 @@ public class RecordService extends LifecyclesService
      */
     public Callable<Integer> clearSensorsFiles()
     {
-        return Persistence.INSTANCE.deleteFiles(mAccumulatorManager.getAccumulators().values());
+        return Persistence.DOCUMENTS_FOLDER.deleteFiles(mAccumulatorManager.getAccumulators().values());
     }
 
 
@@ -253,7 +288,7 @@ public class RecordService extends LifecyclesService
      */
     public Callable<Integer> deleteSaveFolder()
     {
-        return Persistence.INSTANCE.deleteSaveFolder();
+        return Persistence.DOCUMENTS_FOLDER.deleteSaveFolder();
     }
 
 
@@ -274,12 +309,12 @@ public class RecordService extends LifecyclesService
         UserSpeechPrompts.USER_ACTIVITY_CLASSIFICATION.clearLastAnswer();
     }
 
-    // Helper functions to start the service
 
-    public static Intent getStartIntent(Context context)
-    {
-        return getStartIntent(context, DEFAULT_RECURRENT_SAVE_SECS);
-    }
+
+
+
+    /*     Helper functions     */
+
 
     /**
      * Get the START_RECORDING intent with the specified save interval
@@ -287,11 +322,13 @@ public class RecordService extends LifecyclesService
      * @param recurrentSaveSecs the seconds to recurrently invoke the save and zip procedure
      * @return the starting intent
      */
-    public static Intent getStartIntent(Context context, int recurrentSaveSecs)
+    public static Intent getStartIntent(Context context, int recurrentSaveSecs, long minDelayMillis, int... sensorTypes)
     {
         Intent intent = new Intent(context, RecordService.class);
         intent.setAction(ACTION_START_RECORDING);
         intent.putExtra(EXTRA_RECURRENT_SAVE_SECS, recurrentSaveSecs);
+        intent.putExtra(EXTRA_RECORDED_SENSOR_TYPES, sensorTypes);
+        intent.putExtra(EXTRA_MIN_DELAY_MILLIS, minDelayMillis);
         return intent;
     }
 
@@ -304,18 +341,6 @@ public class RecordService extends LifecyclesService
     }
 
 
-    /**
-     * Start this service as a Service or ForegroundService depending on the system's version.
-     * Use DEFAULT_RECURRENT_SAVE_SECS as seconds for the recurrent save
-     * @param context the calling Android context
-     * @return the service's ComponentName
-     */
-    public static ComponentName start(Context context)
-    {
-        return start(context, RecordService.DEFAULT_RECURRENT_SAVE_SECS);
-    }
-
-
 
     /**
      * Start this service as a Service or ForegroundService depending on the system's version
@@ -323,9 +348,9 @@ public class RecordService extends LifecyclesService
      * @param recurrentSaveSecs the seconds to recurrently invoke the save and zip procedure
      * @return the service's ComponentName
      */
-    public static ComponentName start(Context context, int recurrentSaveSecs)
+    public static ComponentName startRecording(Context context, int recurrentSaveSecs, long minDelayMillis, int... sensorTypes)
     {
-        Intent intent = RecordService.getStartIntent(context, recurrentSaveSecs);
+        Intent intent = RecordService.getStartIntent(context, recurrentSaveSecs, minDelayMillis, sensorTypes);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
         {
@@ -338,14 +363,13 @@ public class RecordService extends LifecyclesService
 
     /**
      * Stops the service
-     * @param context
+     * @param context the calling context
      * @return whether the service got stop
      */
-    public static boolean stop(Context context)
+    public static ComponentName stop(Context context)
     {
-        Intent intent = new Intent(context, RecordService.class);
-        intent.setAction(RecordService.ACTION_STOP_RECORDING);
-        return context.stopService(intent);
+        Intent intent = getStopIntent(context);
+        return context.startService(intent);
     }
 
     /**
@@ -380,7 +404,7 @@ public class RecordService extends LifecyclesService
     public static ComponentName requestUserClassification(Context context)
     {
         Intent intent = new Intent(context, RecordService.class);
-        intent.setAction(RecordService.ACTION_PROMPT_USER_CLASSIFICATION);
+        intent.setAction(RecordService.ACTION_PROMPT_CLASSIFICATION);
         return context.startService(intent);
     }
 
@@ -393,7 +417,17 @@ public class RecordService extends LifecyclesService
     public static ComponentName clearUserClassification(Context context)
     {
         Intent intent = new Intent(context, RecordService.class);
-        intent.setAction(RecordService.ACTION_CLEAR_USER_CLASSIFICATION);
+        intent.setAction(RecordService.ACTION_CLEAR_CLASSIFICATION);
         return context.startService(intent);
+    }
+
+    /**
+     * Asks permissions for this service
+     * @param activity the calling activity
+     */
+    public static void askPermissions(Activity activity)
+    {
+        Persistence.DOCUMENTS_FOLDER.askPermissions(activity);
+        ASR.FREE_FORM.askPermissions(activity);
     }
 }

@@ -5,6 +5,7 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.VibrationEffect;
 import android.util.Log;
 
 import umu.software.activityrecognition.common.AndroidUtils;
@@ -21,8 +22,17 @@ public class RecurrentSave extends BroadcastReceiver
     public void onReceive(Context context, Intent intent)
     {
         Log.i(RecurrentSave.class.getName(), "RecurrentSave onReceive()");
+
         RecordService.saveZipClearFiles(context);
+
+        // Notify user through vibration
+        AndroidUtils.getVibrator(context).vibrate(
+                VibrationEffect.createOneShot(
+                        500,
+                        VibrationEffect.DEFAULT_AMPLITUDE)
+        );
     }
+
 
     public static PendingIntent getRepeatingIntent(Context context)
     {
@@ -37,10 +47,10 @@ public class RecurrentSave extends BroadcastReceiver
 
     /**
      * Start to recurrently save
-     * @param context
-     * @param intervalSeconds
+     * @param context calling context
+     * @param intervalSeconds seconds in between each save
      */
-    public static void start(Context context, long intervalSeconds)
+    public static void startRecurrentSave(Context context, long intervalSeconds)
     {
         AndroidUtils
                 .getAlarmManager(context)
@@ -52,20 +62,12 @@ public class RecurrentSave extends BroadcastReceiver
                 );
     }
 
-    /**
-     * Start to recurrently save every 10 minutes
-     * @param context
-     */
-    public static void start(Context context)
-    {
-        start(context, 600);
-    }
 
     /**
      *
-     * @param context
+     * @param context the calling context
      */
-    public static void stop(Context context)
+    public static void stopRecurrentSave(Context context)
     {
         AndroidUtils
                 .getAlarmManager(context)

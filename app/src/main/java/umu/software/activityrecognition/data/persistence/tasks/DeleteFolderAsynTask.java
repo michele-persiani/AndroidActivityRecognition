@@ -1,4 +1,4 @@
-package umu.software.activityrecognition.sensors.persistence.tasks;
+package umu.software.activityrecognition.data.persistence.tasks;
 
 import android.os.AsyncTask;
 

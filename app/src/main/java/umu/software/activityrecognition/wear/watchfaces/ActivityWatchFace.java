@@ -1,4 +1,4 @@
-package umu.software.activityrecognition.watchfaces;
+package umu.software.activityrecognition.wear.watchfaces;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -70,6 +70,11 @@ public class ActivityWatchFace extends CanvasWatchFaceService implements Callabl
         /* Activities and values */
         float[] mValues = new float[]{};
         String[] mActivities = new String[]{};
+
+
+        /* Text */
+        int mTextSize = 26;
+
 
         /* Colors */
         int[] mActivitiesColor = new int[]{
@@ -397,7 +402,7 @@ public class ActivityWatchFace extends CanvasWatchFaceService implements Callabl
             String text = getActivitiesNames()[sliceNum];
             Paint textPaint = newPaint();
             textPaint.setColor(mLinesColor);
-            textPaint.setTextSize(14);
+            textPaint.setTextSize(mTextSize);
             Rect textBounds = new Rect();
 
             textPaint.getTextBounds(text, 0, text.length(), textBounds);

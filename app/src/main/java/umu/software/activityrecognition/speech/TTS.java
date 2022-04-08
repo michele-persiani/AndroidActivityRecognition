@@ -34,7 +34,7 @@ public enum TTS implements LifecycleElement
         if (mInitialized || mInitializing)
             return;
         mInitializing = true;
-        mHandler = AndroidUtils.newHandler(TTS.class.getName());
+        mHandler = AndroidUtils.newHandler();
         mTextToSpeech = new TextToSpeech(context, status -> {
             if(status != TextToSpeech.ERROR)
             {
@@ -75,7 +75,7 @@ public enum TTS implements LifecycleElement
         mHandler = null;
     }
 
-    public void say(String prompt, UtteranceProgressListener callback)
+    public TTS say(String prompt, UtteranceProgressListener callback)
     {
         mHandler.post(() -> {
             if (!mInitialized)
@@ -86,20 +86,22 @@ public enum TTS implements LifecycleElement
             mTextToSpeech.setOnUtteranceProgressListener(callback);
             mTextToSpeech.speak(prompt, TextToSpeech.QUEUE_FLUSH, null, TTS.class.getName());
         });
+        return this;
     }
 
 
-    public void say(String prompt)
+    public TTS say(String prompt)
     {
-        say(prompt, null);
+        return say(prompt, null);
     }
 
-    public void setLocale(Locale locale)
+    public TTS setLocale(Locale locale)
     {
         mHandler.post(() -> {
             if (!mInitialized)
                 return;
             mTextToSpeech.setLanguage(locale);
         });
+        return this;
     }
 }

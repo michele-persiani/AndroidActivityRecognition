@@ -8,6 +8,8 @@ import android.hardware.SensorManager;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.PowerManager;
+import android.os.Vibrator;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -19,13 +21,14 @@ import java.io.InputStream;
  */
 public class AndroidUtils
 {
-
+    private static int numHandlers = 0;
 
     /* Handlers */
 
-    public static Handler newHandler(String name)
+    public static Handler newHandler()
     {
-        HandlerThread handlerThread = new HandlerThread(name);
+        numHandlers += 1;
+        HandlerThread handlerThread = new HandlerThread("Handler-"+numHandlers);
         handlerThread.start();
         return new Handler(handlerThread.getLooper());
     }
@@ -45,6 +48,10 @@ public class AndroidUtils
 
     /* System services */
 
+    public static Vibrator getVibrator(Context context)
+    {
+        return (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+    }
 
     public static SensorManager getSensorManager(Context context)
     {
@@ -64,7 +71,20 @@ public class AndroidUtils
     }
 
 
+    public static PowerManager getPowerManager(Context context)
+    {
+        return (PowerManager) context.getSystemService(Context.POWER_SERVICE);
 
+    }
+
+
+    public static PowerManager.WakeLock getWakeLock(Context context, int wakeLockType)
+    {
+        PowerManager powerManager = getPowerManager(context);
+        return powerManager.newWakeLock(
+                wakeLockType,
+                context.getClass().getSimpleName() +"/"+ wakeLockType);
+    }
 
 
 

@@ -1,8 +1,7 @@
-package umu.software.activityrecognition.sensors;
+package umu.software.activityrecognition.data.classification;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.os.Handler;
 import android.speech.RecognitionListener;
 import android.speech.tts.UtteranceProgressListener;
 
@@ -11,7 +10,6 @@ import java.util.List;
 import java.util.Locale;
 
 import umu.software.activityrecognition.R;
-import umu.software.activityrecognition.common.AndroidUtils;
 import umu.software.activityrecognition.common.lifecycles.LifecycleElement;
 import umu.software.activityrecognition.speech.ASR;
 import umu.software.activityrecognition.speech.TTS;
@@ -23,7 +21,6 @@ public enum UserSpeechPrompts implements LifecycleElement
     private final int mRequestStringId;
     private String mRequestString = null;
 
-    Handler mHandler = AndroidUtils.newMainLooperHandler();
 
     List<String> mAnswerCandidates = new ArrayList<>();
     private boolean mListening = false;
@@ -84,9 +81,11 @@ public enum UserSpeechPrompts implements LifecycleElement
     }
 
 
-    public void setLanguage(Locale locale)
+    public UserSpeechPrompts setLanguage(Locale locale)
     {
+        ASR.FREE_FORM.setLocale(locale);
         TTS.INSTANCE.setLocale(locale);
+        return this;
     }
 
 
@@ -124,66 +123,65 @@ public enum UserSpeechPrompts implements LifecycleElement
         if (!initialized() || mListening)
             return;
         mListening = true;
-        mHandler.post(() -> {
-            ASR.FREE_FORM.startListening(new RecognitionListener()
+        ASR.FREE_FORM.startListening(new RecognitionListener()
+        {
+
+            @Override
+            public void onReadyForSpeech(Bundle bundle)
             {
 
-                @Override
-                public void onReadyForSpeech(Bundle bundle)
-                {
+            }
 
-                }
+            @Override
+            public void onBeginningOfSpeech()
+            {
 
-                @Override
-                public void onBeginningOfSpeech()
-                {
+            }
 
-                }
+            @Override
+            public void onRmsChanged(float v)
+            {
 
-                @Override
-                public void onRmsChanged(float v)
-                {
+            }
 
-                }
+            @Override
+            public void onBufferReceived(byte[] bytes)
+            {
 
-                @Override
-                public void onBufferReceived(byte[] bytes)
-                {
+            }
 
-                }
+            @Override
+            public void onEndOfSpeech()
+            {
+                mListening = false;
+            }
 
-                @Override
-                public void onEndOfSpeech()
-                {
-                    mListening = false;
-                }
+            @Override
+            public void onError(int i)
+            {
+                mAnswerCandidates.clear();
+                mListening = false;
+            }
 
-                @Override
-                public void onError(int i)
-                {
-                    mAnswerCandidates.clear();
-                    mListening = false;
-                }
+            @Override
+            public void onResults(Bundle bundle)
+            {
+                mAnswerCandidates = ASR.FREE_FORM.getRecognizedSpeech(bundle);
+                //TTS.INSTANCE.say("You said "+mAnswerCandidates.get(0));
+                mListening = false;
+            }
 
-                @Override
-                public void onResults(Bundle bundle)
-                {
-                    mAnswerCandidates = ASR.FREE_FORM.getRecognizedSpeech(bundle);
-                    mListening = false;
-                }
+            @Override
+            public void onPartialResults(Bundle bundle)
+            {
 
-                @Override
-                public void onPartialResults(Bundle bundle)
-                {
+            }
 
-                }
+            @Override
+            public void onEvent(int i, Bundle bundle)
+            {
 
-                @Override
-                public void onEvent(int i, Bundle bundle)
-                {
-
-                }
-            });
+            }
         });
 
     }
@@ -191,7 +189,7 @@ public enum UserSpeechPrompts implements LifecycleElement
 
     /**
      *
-     * @return The last answer provided by the user or null if he was never prompted, or if the
+     * @return The last answer provided by the user, or null if he was never prompted or if the
      * answers were cleared
      */
     public String getLastAnswer()

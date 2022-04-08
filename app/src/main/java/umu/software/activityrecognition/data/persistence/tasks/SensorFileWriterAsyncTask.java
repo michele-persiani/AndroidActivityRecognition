@@ -1,4 +1,4 @@
-package umu.software.activityrecognition.sensors.persistence.tasks;
+package umu.software.activityrecognition.data.persistence.tasks;
 
 import com.c_bata.DataFrame;
 
@@ -7,7 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 import umu.software.activityrecognition.common.persistence.FileWriterAsyncTask;
-import umu.software.activityrecognition.sensors.accumulators.SensorAccumulator;
+import umu.software.activityrecognition.data.accumulators.SensorAccumulator;
 
 public class SensorFileWriterAsyncTask extends FileWriterAsyncTask<SensorAccumulator>
 {
@@ -34,7 +34,7 @@ public class SensorFileWriterAsyncTask extends FileWriterAsyncTask<SensorAccumul
         File file = getOutputFile(sensor);
         DataFrame df = sensor.getDataFrame();
         if (reset)
-            sensor.reset();
+            sensor.clearDataFrame();
         boolean exists = file.exists();
         return df.toCSV(exists);
     }

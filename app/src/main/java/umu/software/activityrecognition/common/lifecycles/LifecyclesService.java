@@ -51,7 +51,6 @@ public abstract class LifecyclesService extends Service
     }
 
 
-
     protected void populateLifecycles(List<LifecycleElement> elements)
     {
 

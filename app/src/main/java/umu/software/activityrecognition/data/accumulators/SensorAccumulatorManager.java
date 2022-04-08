@@ -1,18 +1,21 @@
-package umu.software.activityrecognition.sensors.accumulators;
+package umu.software.activityrecognition.data.accumulators;
 
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Handler;
+import android.util.Log;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import umu.software.activityrecognition.common.lifecycles.LifecycleElement;
 import umu.software.activityrecognition.common.Factory;
@@ -21,11 +24,15 @@ import umu.software.activityrecognition.common.AndroidUtils;
 
 public class SensorAccumulatorManager implements LifecycleElement
 {
-    private final int mDelay;
     private final Factory<SensorAccumulator> mFactory;
+    private final int mDelay;
+    private final int[] mSensorTypes;
     private SensorManager mSensorManager;
-    private Map<Integer, Sensor> mSensors;
-    private Map<Integer, SensorAccumulator> mListeners;
+
+    private Map<Integer, Sensor> mSensors = new HashMap<>();
+    private Map<Integer, SensorAccumulator> mListeners = new HashMap<>();
+
+    private final boolean mPrivateHandler;
     private Handler mHandler;
 
     /**
@@ -33,17 +40,15 @@ public class SensorAccumulatorManager implements LifecycleElement
      * @param factory Factory that will be used to instantiate all of the accumulators used by the manager
      * @param delay The Android Sensor.DELAY_X identifier to use when registering for sensors
      */
-    public SensorAccumulatorManager(Factory<SensorAccumulator> factory, int delay)
+    public SensorAccumulatorManager(Factory<SensorAccumulator> factory, boolean privateHandler, int delay, int... sensorTypes)
     {
         this.mDelay = delay;
         this.mFactory = factory;
+        this.mSensorTypes = sensorTypes;
+        mPrivateHandler = privateHandler;
     }
 
-    public SensorAccumulatorManager(Factory<SensorAccumulator> factory)
-    {
-        this.mDelay = SensorManager.SENSOR_DELAY_NORMAL;
-        this.mFactory = factory;
-    }
+
 
     /**
      * Initialize the manager by fetching the available sensors from the system
@@ -51,20 +56,18 @@ public class SensorAccumulatorManager implements LifecycleElement
      */
     public void onCreate(Context context)
     {
+        mHandler = mPrivateHandler? AndroidUtils.newHandler() : AndroidUtils.newMainLooperHandler();
         mSensorManager = AndroidUtils.getSensorManager(context);
-        mHandler = AndroidUtils.newHandler("SensorAccumulatorManager");
+        List<Sensor> sensors = Arrays.stream(mSensorTypes)
+                .mapToObj(type -> mSensorManager.getDefaultSensor(type))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
 
-        List<Sensor> sensors = mSensorManager.getSensorList(Sensor.TYPE_ALL);
-
-        mSensors = new HashMap<>();
-        mListeners = new HashMap<>();
-
-
+        mSensors.clear();
         for (int i = 0; i < sensors.size(); i++)
-        {
-            Sensor s = sensors.get(i);
-            mSensors.put(i, s);
-        }
+            mSensors.put(i, sensors.get(i));
+        Log.i(getClass().getSimpleName(), "onCreate()");
+        mListeners.clear();
     }
 
     @Override
@@ -83,7 +86,8 @@ public class SensorAccumulatorManager implements LifecycleElement
     public void onDestroy(Context context)
     {
         onStop(context);
-        mHandler.getLooper().quitSafely(); // Quit the handler that receives the sensor events
+        if(mPrivateHandler)
+            mHandler.getLooper().quitSafely(); // Quit the handler that receives the sensor events
     }
 
     /**
@@ -138,6 +142,7 @@ public class SensorAccumulatorManager implements LifecycleElement
     }
 
 
+
     /**
      * Register a SensorAccumulator to the sensor with the given Id. The Id order is determined
      * by the order of the sensor returned by SensorManager
@@ -146,25 +151,32 @@ public class SensorAccumulatorManager implements LifecycleElement
      */
     public boolean startRecording(int sensorId)
     {
-        if (mSensorManager == null)
+        if (mSensorManager == null || sensorId < 0 || sensorId > mSensors.size())
             return false;
         else if (!mSensors.containsKey(sensorId))
             return false;
         else if (mListeners.containsKey(sensorId))
             return true;
+        else if (getSensor(sensorId).getReportingMode() == Sensor.REPORTING_MODE_ONE_SHOT)
+        {
+            Log.e(getClass().getSimpleName(), "Sensors with REPORTING_MODE_ONE_SHOT are not supported.");
+            return false;
+        }
         else
         {
-            Sensor sensor = this.getSensor(sensorId);
+            Sensor sensor = getSensor(sensorId);
+            Log.i(getClass().getSimpleName(), String.format("Registering %s...", sensor.getName()));
             SensorAccumulator accum = mFactory.make();
             mListeners.put(sensorId, accum);
-            mSensorManager.registerListener(accum, sensor, mDelay, mHandler);
-            return true;
+            boolean result = mSensorManager.registerListener(accum, sensor, mDelay, mHandler);
+            Log.i(getClass().getSimpleName(), "...done");
+            return result;
         }
     }
 
     /**
      * Start recording from all accumulators
-     * @return the number of started accumulators
+     * @return the number of running accumulators
      */
     public int startRecordings()
     {
@@ -191,7 +203,9 @@ public class SensorAccumulatorManager implements LifecycleElement
         {
             Sensor sensor = mSensors.get(sensorId);
             SensorEventListener listener = mListeners.get(sensorId);
+            Log.i(getClass().getSimpleName(), String.format("Unregistering %s...", sensor.getName()));
             mSensorManager.unregisterListener(listener, sensor);
+            Log.i(getClass().getSimpleName(), "...done");
             return true;
         }
         return false;
@@ -220,7 +234,7 @@ public class SensorAccumulatorManager implements LifecycleElement
     public int resetAccumulators()
     {
         for (SensorAccumulator acc : mListeners.values())
-            acc.reset();
+            acc.clearDataFrame();
         return mListeners.size();
     }
 }

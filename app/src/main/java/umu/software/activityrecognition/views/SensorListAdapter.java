@@ -1,49 +1,49 @@
-package umu.software.activityrecognition;
+package umu.software.activityrecognition.views;
 
 
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
-import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import umu.software.activityrecognition.sensors.accumulators.Accumulators;
-import umu.software.activityrecognition.sensors.accumulators.SensorAccumulator;
+import umu.software.activityrecognition.R;
+import umu.software.activityrecognition.data.accumulators.SensorAccumulators;
+import umu.software.activityrecognition.data.accumulators.SensorAccumulator;
+import umu.software.activityrecognition.data.accumulators.SensorAccumulatorManager;
 
 public class SensorListAdapter extends RecyclerView.Adapter<SensorListAdapter.ViewHolder> {
 
-    protected SensorManager sensorManager;
-    private List<Sensor> sensors;
-
-    Handler callbacksHandler = new Handler();
-
-    public class ViewHolder extends RecyclerView.ViewHolder implements SensorEventListener {
+    protected final SensorAccumulatorManager sensorManager;
 
 
+    public class ViewHolder extends RecyclerView.ViewHolder implements SensorEventListener
+    {
         TextView textView;
+        Button button;
         SensorAccumulator accumulator;
 
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             textView = this.itemView.findViewById(R.id.textView);
-            resetAccumulator();
+            button = itemView.findViewById(R.id.button);
+            accumulator = SensorAccumulators.newFactory().make();
         }
 
-        public void resetAccumulator()
+        public void setButtonCallback(View.OnClickListener l)
         {
-            SensorListAdapter.this.sensorManager.unregisterListener(this);
-            accumulator = Accumulators.newFactory().make();
+            button.setOnClickListener(l);
         }
 
         public void setText(String text) {
@@ -55,6 +55,7 @@ public class SensorListAdapter extends RecyclerView.Adapter<SensorListAdapter.Vi
         public void onSensorChanged(SensorEvent sensorEvent)
         {
             accumulator.onSensorChanged(sensorEvent);
+            //Log.i(sensorEvent.sensor.getName(), "Event!");
             String str = accumulator.countReadings() + ' ' + Arrays.toString(sensorEvent.values) +
                     '\n' + sensorEvent.sensor.getName();
             setText(str);
@@ -65,13 +66,14 @@ public class SensorListAdapter extends RecyclerView.Adapter<SensorListAdapter.Vi
         {
             accumulator.onAccuracyChanged(sensor, i);
         }
+
     }
 
 
-    public SensorListAdapter(SensorManager sensorManager)
+    public SensorListAdapter(SensorAccumulatorManager sensorManager)
     {
         this.sensorManager = sensorManager;
-        this.sensors = sensorManager.getSensorList(Sensor.TYPE_ALL);
+
     }
 
 
@@ -87,39 +89,33 @@ public class SensorListAdapter extends RecyclerView.Adapter<SensorListAdapter.Vi
     @Override
     public void onBindViewHolder(@NonNull SensorListAdapter.ViewHolder holder, int position)
     {
-        String initialText = "No events received from" + this.sensors.get(position).getName();
+        List<Sensor> sensors = new ArrayList<>(sensorManager.getSensors().values());
+        String initialText = "No events received from" + sensors.get(position).getName();
         holder.setText(initialText);
-
-        sensorManager.registerListener(holder, this.sensors.get(position), SensorManager.SENSOR_DELAY_GAME, callbacksHandler);
+        holder.setButtonCallback((e) -> {
+            String str = sensorManager.getAccumulator(position).countReadings() +
+                '\n' + sensorManager.getSensor(position).getName();
+            holder.setText(str);
+        });
     }
 
     @Override
     public void onViewRecycled(@NonNull ViewHolder holder)
     {
         super.onViewRecycled(holder);
-        sensorManager.unregisterListener(holder);
-        holder.resetAccumulator();
-
-    }
-
-    @Override
-    public void onDetachedFromRecyclerView(@NonNull RecyclerView recyclerView)
-    {
-        super.onDetachedFromRecyclerView(recyclerView);
-
+        holder.setButtonCallback(null);
     }
 
 
     @Override
     public int getItemCount()
     {
-        return this.sensors.size();
+        return sensorManager.getSensors().size();
     }
 
     @Override
     public void onViewDetachedFromWindow(@NonNull ViewHolder holder)
     {
         super.onViewDetachedFromWindow(holder);
-        sensorManager.unregisterListener(holder);
     }
 }

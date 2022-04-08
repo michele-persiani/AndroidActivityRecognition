@@ -4,8 +4,7 @@ import android.content.res.AssetFileDescriptor;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.os.Handler;
-
-import androidx.core.util.Pair;
+import android.util.Log;
 
 import org.tensorflow.lite.Interpreter;
 
@@ -13,89 +12,87 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.ArrayList;
 
 import umu.software.activityrecognition.common.lifecycles.LifecycleElement;
 import umu.software.activityrecognition.common.AndroidUtils;
+import umu.software.activityrecognition.tflite.model.AccumulatorTFModel;
 
 
 public enum SensorTensorflowLiteModels implements LifecycleElement
 {
-
-    ENCODER_GRAVITY("encoder.tflite",
-            SensorManager.SENSOR_DELAY_NORMAL,
-            InputTensorsDefinition
-                    .with("gravity  Non-wakeup", "f_0", "f_1", "f_2", "delta_timestamp")
+    SOM("som.tflite",
+            InputTensorDefinition
+                    .with("Accelerometer", 50, "f_0", "f_1", "f_2", "delta_timestamp")
+                    .and("Gyroscope", 50, "f_0", "f_1", "f_2", "delta_timestamp")
     );
 
 
-    private static class InputTensorsDefinition extends ArrayList<Pair<String, String[]>>
-    {
 
-        public static InputTensorsDefinition with(String sensorName, String... columns)
-        {
-            InputTensorsDefinition t = new InputTensorsDefinition();
-            t.add(Pair.create(sensorName, columns));
-            return t;
-        }
-
-        public InputTensorsDefinition then(String sensorName, String... columns)
-        {
-            add(Pair.create(sensorName, columns));
-            return this;
-        }
-    }
-
-    // Mapping -> sensor_name, input_tensor_num, window_size
-
-    private final String filePath;
-    private final int samplingDelay;
+    private final String byteModelFilePath;
     private Handler handler;
 
     private boolean initialized = false;
-    private PredictFromAccumulator template;
-    private final InputTensorsDefinition tensorDefinition;
+    private AccumulatorTFModel model;
+    private final InputTensorDefinition tensorDefinition;
 
 
-    SensorTensorflowLiteModels(String filePath, int samplingDelay, InputTensorsDefinition tensorsDefinition)
+    SensorTensorflowLiteModels(String byteModelFilePath, InputTensorDefinition tensorsDefinition)
     {
-        this.filePath = filePath;
-        this.samplingDelay = samplingDelay;
+        this.byteModelFilePath = byteModelFilePath;
         this.tensorDefinition = tensorsDefinition;
-    };
+    }
 
     @Override
     public void onCreate(Context context)
     {
         if (initialized)
             return;
-        MappedByteBuffer model;
-        try {
-            model = loadModelFile(context, filePath);
-        } catch (IOException e) {
-            e.printStackTrace();
+        MappedByteBuffer byteModel = loadByteModel(context, byteModelFilePath);
+        if (byteModel == null)
             return;
-        }
-        Interpreter interpreter = new Interpreter(model);
-        interpreter.allocateTensors();
-        template = new PredictFromAccumulator(interpreter);
 
-        handler = AndroidUtils.newHandler("tflite-"+filePath);
-        initializeAccumulators();
+        Interpreter interpreter = new Interpreter(byteModel);
+        interpreter.allocateTensors();
+        model = new AccumulatorTFModel(interpreter);
+
+        handler = AndroidUtils.newHandler();
+
+        // Initialize accumulators
+        tensorDefinition.forEachAccumulator((i, acc) -> {
+            model.setAccumulator(i, acc);
+            acc.setWindowSize(model.inputSequenceLength(i));
+        });
+
         initialized = true;
     }
 
     @Override
     public void onStart(Context context)
     {
-        if(initialized)
-            registerAccumulators(context);
+        if(!initialized)
+            return;
+
+        // Register accumulators
+        SensorManager sensorManager = AndroidUtils.getSensorManager(context);
+
+        tensorDefinition.forEachSensorAccumulator((sensorName, accumulator) -> {
+            Sensor sensor = findSensor(sensorManager, sensorName);
+            assert sensor != null;
+            sensorManager.registerListener(accumulator, sensor, SensorManager.SENSOR_DELAY_NORMAL, handler);
+        });
     }
 
     @Override
     public void onStop(Context context)
     {
-        unregisterAccumulators(context);
+        if(!initialized)
+            return;
+
+        // Unregister accumulators
+        SensorManager sensorManager = AndroidUtils.getSensorManager(context);
+        tensorDefinition.forEachSensorAccumulator((sensorName, accumulator) -> {
+            sensorManager.unregisterListener(accumulator);
+        });
     }
 
     @Override
@@ -105,48 +102,20 @@ public enum SensorTensorflowLiteModels implements LifecycleElement
         handler.getLooper().quitSafely();
     }
 
+
+
     public boolean predict()
     {
-        return template.predict();
+        return model.predict();
     }
 
 
     public float[][] getOutput(int outputNum)
     {
-        return template.getOutput(outputNum);
+        return model.getOutput(outputNum);
     }
 
 
-    private void initializeAccumulators()
-    {
-        String[] columns;
-        for (int i = 0; i < tensorDefinition.size(); i++)
-        {
-            columns = tensorDefinition.get(i).second;
-            template.setAccumulator(i, columns);
-        }
-
-    }
-
-    private void registerAccumulators(Context context)
-    {
-        SensorManager sensorManager = AndroidUtils.getSensorManager(context);
-        template.forEachAccumulator((inputNum, accum) -> {
-            Pair<String, String[]> sensorColumns = tensorDefinition.get(inputNum);
-            String  sensorName = sensorColumns.first;
-            Sensor sensor = findSensor(sensorManager, sensorName);
-            assert sensor != null;
-            sensorManager.registerListener(accum, sensor, samplingDelay, handler);
-        });
-    }
-
-    private void unregisterAccumulators(Context context)
-    {
-        SensorManager sensorManager = AndroidUtils.getSensorManager(context);
-        template.forEachAccumulator((inputNum, accum) -> {
-            sensorManager.unregisterListener(accum);
-        });
-    }
 
     private static Sensor findSensor(SensorManager sensorManager, String name)
     {
@@ -157,14 +126,23 @@ public enum SensorTensorflowLiteModels implements LifecycleElement
     }
 
 
-
-    private static MappedByteBuffer loadModelFile(Context context, String modelFilename) throws IOException
+    private static MappedByteBuffer loadByteModel(Context context, String modelFilename)
     {
-        AssetFileDescriptor fileDescriptor = context.getAssets().openFd(modelFilename);
-        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
-        FileChannel fileChannel = inputStream.getChannel();
-        long startOffset = fileDescriptor.getStartOffset();
-        long declaredLength = fileDescriptor.getDeclaredLength();
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+        try {
+            AssetFileDescriptor fileDescriptor = context.getAssets().openFd(modelFilename);
+            FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+            FileChannel fileChannel = inputStream.getChannel();
+            long startOffset = fileDescriptor.getStartOffset();
+            long declaredLength = fileDescriptor.getDeclaredLength();
+            MappedByteBuffer byteModel = fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+            return byteModel;
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            Log.e(SensorTensorflowLiteModels.class.getSimpleName(), "! Exception while load tensorflow model !");
+            return null;
+        }
     }
+
 }

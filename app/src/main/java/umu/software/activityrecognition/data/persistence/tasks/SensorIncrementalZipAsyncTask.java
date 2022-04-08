@@ -1,4 +1,4 @@
-package umu.software.activityrecognition.sensors.persistence.tasks;
+package umu.software.activityrecognition.data.persistence.tasks;
 
 import android.annotation.SuppressLint;
 
@@ -6,7 +6,7 @@ import java.io.File;
 import java.util.Arrays;
 
 import umu.software.activityrecognition.common.persistence.ZipAsyncTask;
-import umu.software.activityrecognition.sensors.accumulators.SensorAccumulator;
+import umu.software.activityrecognition.data.accumulators.SensorAccumulator;
 
 public class SensorIncrementalZipAsyncTask extends ZipAsyncTask<SensorAccumulator>
 {

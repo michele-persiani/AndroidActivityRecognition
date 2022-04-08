@@ -4,14 +4,10 @@ import android.content.Intent;
 import android.os.Bundle;
 
 import umu.software.activityrecognition.R;
-import umu.software.activityrecognition.sensors.persistence.Persistence;
 import umu.software.activityrecognition.services.RecordService;
 import umu.software.activityrecognition.services.RecordServiceConnection;
-import umu.software.activityrecognition.speech.ASR;
 
-/**
- * The Main Activity just start RecordServive and then finishes.
- */
+
 public class MainActivity extends ButtonsActivity
 {
 
@@ -24,7 +20,11 @@ public class MainActivity extends ButtonsActivity
     protected void buildButtons()
     {
         buildButton(R.id.button1, "Start record service", (e) -> {
-            RecordService.start(this, 10);
+            RecordService.startRecording(
+                    this,
+                    RecordService.DEFAULT_RECURRENT_SAVE_SECS,
+                    RecordService.DEFAULT_MIN_DELAY_MILLIS,
+                    RecordService.DEFAULT_RECORDED_SENSOR_TYPES);
         });
         buildButton(R.id.button2, "Stop record service", (e) -> {
             RecordService.stop(this);
@@ -45,6 +45,10 @@ public class MainActivity extends ButtonsActivity
             }).bind(this);
         });
 
+        buildButton(R.id.button5, "Save files", (e) -> {
+            RecordService.saveZipClearFiles(this);
+        });
+
 
     }
 
@@ -52,17 +56,8 @@ public class MainActivity extends ButtonsActivity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        Persistence.INSTANCE.askPermissions(this);
-        ASR.FREE_FORM.askPermissions(this);
-
+        RecordService.askPermissions(this);
     }
 
-    @Override
-    protected void onStart()
-    {
-        super.onStart();
-
-
-    }
 
 }
