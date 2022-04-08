@@ -5,17 +5,18 @@
 Android application that records and saves the data from the available sensors.
 
 
-Main Components:
-- **MainActivity**: the only purpose of the activity is to start the RecordService. By removing the finish() line it shows the sensor readings from the device.
+Main components:
+- **MainActivity**: for testing purposes the activity has buttons to utilize the main components of the application. The final version will remove the activity and keep only the functionalities from RecordService.
 - **RecordService**: main service that records and saves sensor data
   - **SensorAccumulatorManager**: manager handling the sensors and their accumulation into dataframes
-  - **RecordServiceStarter**: starter for the RecordService. Used to restart the service if the system shuts it down
   - **Persistance**: class for saving on external files the current state of SensorAccumulatorManager
   - **RecurrentSave**: this component recurrently saves RecordService readings
-
-  - **TODO**: add Tensorflow Lite classifier
+- **TensorflowLiteModels**: Singleton tensorflow models that uses sensors
+  - **SOM**: Self Orgaizing Map (SOM) showing the classification of the sensor data. Trained with a Ticwatch 3.
+- **ActivityWatchFace**: watchface to be utilized on a watch. The watchface shows the current results of the activity classifier. 
+- **SOMWatchface**: watchface to show the SOM.
 
 
 Author: **Michele Persiani**, michelep@cs.umu.se
 
-**Copiright of Umea University**
+**Copiright of Umea University**.
