@@ -15,6 +15,9 @@ Main components:
   - **SOM**: Self Orgaizing Map (SOM) showing the classification of the sensor data. Trained with a Ticwatch 3.
 - **ActivityWatchFace**: watchface to be utilized on a watch. The watchface shows the current results of the activity classifier. 
 - **SOMWatchface**: watchface to show the SOM.
+- **DialogflowService**: service to connect to a Dialogflow chatbot.
+  -**SpeechChatbot**: chatbot that uses voice to communicate with the user. Supports translation to multiple language (its done through Google Translate so the quality is low)
+  -**ChatbotActivity**, **ChatbotActivity**: Activity and watchface to access the chatbot
 
 
 Author: **Michele Persiani**, michelep@cs.umu.se
