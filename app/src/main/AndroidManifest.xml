@@ -2,14 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="umu.software.activityrecognition">
     <!-- Required to act as a custom watch face. -->
-
     <uses-feature android:name="android.hardware.type.watch" />
-    <uses-feature android:name="android.hardware.sensor.accelerometer"/>
-    <uses-feature android:name="android.hardware.sensor.gyroscope"/>
-    <uses-feature android:name="android.hardware.sensor.stepdetector"/>
-    <uses-feature android:name="android.hardware.sensor.compass"/>
-    <uses-feature android:name="android.hardware.sensor.heartrate"/>
-
+    <uses-feature android:name="android.hardware.sensor.accelerometer" />
+    <uses-feature android:name="android.hardware.sensor.gyroscope" />
+    <uses-feature android:name="android.hardware.sensor.stepdetector" />
+    <uses-feature android:name="android.hardware.sensor.compass" />
+    <uses-feature android:name="android.hardware.sensor.heartrate" />
 
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="com.google.android.wearable.permission.RECEIVE_COMPLICATION_DATA" />
@@ -19,33 +17,28 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.BODY_SENSORS" />
-    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
 
     <application
+        android:name=".application.ApplicationSingleton"
         android:allowBackup="true"
         android:icon="@mipmap/ic_watch_round"
         android:label="@string/app_name"
         android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.DeviceDefault">
+        android:theme="@style/Theme.AppCompat">
+
 
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
-        <meta-data
-            android:name="com.google.android.gms.version"
-            android:value="@integer/google_play_services_version" />
-
-
 
         <!-- Activities -->
-
-
-        <activity
-            android:name=".activities.StartRecordServiceActivity"
-            android:exported="true">
-        </activity>
 
         <activity
             android:name=".activities.MainActivity"
@@ -53,27 +46,43 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
-
         </activity>
 
         <activity
+            android:name=".activities.PreferenceActivity"
+            android:exported="true" />
+        <activity
             android:name=".activities.SensorsActivity"
-            android:exported="true">
-        </activity>
+            android:exported="true" />
 
+
+        <activity
+            android:name=".activities.ChatbotActivity"
+            android:label="@string/chatbot_activity_name"
+            android:exported="true" >
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        </activity>
 
 
 
         <!-- Services -->
-
-
-
         <service
             android:name=".services.RecordService"
             android:enabled="true"
             android:exported="true"
             android:stopWithTask="false" />
+
+        <service
+            android:name=".services.DialogflowService"
+            android:enabled="true"
+            android:exported="true"
+            android:stopWithTask="false" />
+
 
         <!-- Watchfaces -->
         <service
@@ -86,19 +95,19 @@
                 android:value="false" />
             <meta-data
                 android:name="android.service.wallpaper"
-                android:resource="@xml/watch_face" />
+                android:resource="@xml/preferences" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.preview"
                 android:resource="@drawable/watchface" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.preview_circular"
                 android:resource="@drawable/watchface" />
+
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService" />
                 <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
             </intent-filter>
         </service>
-
         <service
             android:name=".wear.watchfaces.SOMWatchface"
             android:exported="true"
@@ -109,24 +118,56 @@
                 android:value="false" />
             <meta-data
                 android:name="android.service.wallpaper"
-                android:resource="@xml/watch_face" />
+                android:resource="@xml/preferences" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.preview"
                 android:resource="@drawable/watchface" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.preview_circular"
                 android:resource="@drawable/watchface" />
+
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService" />
                 <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
             </intent-filter>
         </service>
 
-        <!-- Broadcast receivers -->
+        <service
+            android:name=".wear.watchfaces.ChatbotWatchFace"
+            android:exported="true"
+            android:label="@string/chatbot_watchface_name"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <meta-data
+                android:name="android.service.wallpaper.square_mode"
+                android:value="false" />
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/preferences" />
+            <meta-data
+                android:name="com.google.android.wearable.watchface.preview"
+                android:resource="@drawable/chatbot_off" />
+            <meta-data
+                android:name="com.google.android.wearable.watchface.preview_circular"
+                android:resource="@drawable/chatbot_off" />
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+                <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
+            </intent-filter>
+        </service>
 
-        <receiver
-            android:name=".broadcastreceivers.RecurrentSave"
-            android:enabled="true" />
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false">
+
+            <meta-data  android:name="umu.software.activityrecognition.config.PreferencesInitializers$RecordingsPreferencesInitializer"
+                android:value="androidx.startup" />
+
+            <meta-data  android:name="umu.software.activityrecognition.config.PreferencesInitializers$ChatbotPreferencesInitializer"
+                android:value="androidx.startup" />
+        </provider>
+
 
     </application>
 

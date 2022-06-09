@@ -5,14 +5,22 @@
       <map>
         <entry key="../../../../../layout/custom_preview.xml" value="0.23072916666666668" />
         <entry key="app/src/main/res/drawable/ic_watch_background.xml" value="0.2295" />
+        <entry key="app/src/main/res/layout/activity_chatbot.xml" value="0.30294287362954414" />
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.5419198055893074" />
+        <entry key="app/src/main/res/layout/activity_orientation.xml" value="1.575657894736842" />
+        <entry key="app/src/main/res/layout/activity_settings.xml" value="0.19230769230769232" />
+        <entry key="app/src/main/res/layout/activity_sockets.xml" value="0.25" />
         <entry key="app/src/main/res/layout/activity_start_record_service.xml" value="0.6743421052631579" />
         <entry key="app/src/main/res/layout/buttons_gui.xml" value="0.8102678571428571" />
         <entry key="app/src/main/res/layout/sensor_adapter_text.xml" value="0.3453125" />
         <entry key="app/src/main/res/layout/sensor_holder.xml" value="0.5" />
         <entry key="app/src/main/res/layout/sensors_list.xml" value="0.203125" />
+        <entry key="app/src/main/res/layout/view_listview.xml" value="0.14356884057971014" />
+        <entry key="app/src/main/res/layout/view_preference_item.xml" value="0.33" />
         <entry key="app/src/main/res/mipmap-anydpi-v26/ic_watch.xml" value="0.1" />
         <entry key="app/src/main/res/mipmap-anydpi-v26/ic_watch_round.xml" value="0.126" />
+        <entry key="app/src/main/res/xml/preferences.xml" value="0.2833333333333333" />
+        <entry key="app/src/main/res/xml/preferences_recorded_sensors.xml" value="0.19230769230769232" />
       </map>
     </option>
   </component>

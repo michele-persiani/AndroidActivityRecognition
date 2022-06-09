@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="chatbot_languages">
+        <item>English</item>
+        <item>Svenska</item>
+        <item>Italiano</item>
+    </string-array>
+
+    <string-array name="chatbot_languages_values">
+        <item>en-US</item>
+        <item>sv-SE</item>
+        <item>it-IT</item>
+    </string-array>
+
+
+</resources>

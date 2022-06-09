@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        android:title="@string/category_recordings">
+
+        <ListPreference
+            app:key="@string/save_interval_minutes"
+            app:title="@string/save_interval_title"
+            app:summary="@string/save_interval_summary"
+            android:entries="@array/save_interval_minutes"
+            app:entryValues="@array/save_interval_minutes_values"/>
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/recordings_use_wake_lock"
+            android:title="@string/recordings_use_wake_lock_title"
+            android:summary="@string/recordings_use_wake_lock_summary"
+            app:allowDividerBelow="true"/>
+
+
+
+        <Preference
+            app:key="@string/recorded_sensors"
+            app:title="@string/recorded_sensors_title"
+            app:summary="@string/recorded_sensors_summary"
+            app:allowDividerAbove="true"/>
+
+        <ListPreference
+            app:key="@string/read_sensor_delay_millis"
+            app:title="@string/read_sensor_delay_title"
+            app:summary="@string/read_sensor_delay_summary"
+            android:entries="@array/readings_delay_millis"
+            app:entryValues="@array/readings_delay_millis_values"
+            app:allowDividerBelow="true"/>
+
+
+
+        <ListPreference
+            app:key="@string/read_models_delay_millis"
+            app:title="@string/read_models_delay_title"
+            app:summary="@string/read_models_delay_summary"
+            android:entries="@array/readings_delay_millis"
+            app:entryValues="@array/readings_delay_millis_values"
+            app:allowDividerAbove="true"/>
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/category_chatbot">
+
+        <ListPreference
+            app:key="@string/chatbot_language"
+            app:title="@string/chatbot_language_title"
+            app:summary="@string/chatbot_language_summary"
+            android:entries="@array/chatbot_languages"
+            app:entryValues="@array/chatbot_languages_values"/>
+        <SeekBarPreference
+            app:key="@string/chatbot_voice_speed"
+            app:title="@string/chatbot_voice_speed_title"
+            app:summary="@string/chatbot_voice_speed_summary"
+            app:showSeekBarValue="true"
+            app:defaultValue="90"
+            app:min="10"
+            android:max="100"/>
+
+        <ListPreference
+            app:key="@string/chatbot_recurrent_event_minutes"
+            app:title="@string/chatbot_recurrent_event_minutes_key"
+            app:summary="@string/chatbot_recurrent_event_minutes_summary"
+            android:entries="@array/save_interval_minutes"
+            app:entryValues="@array/save_interval_minutes_values"/>
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

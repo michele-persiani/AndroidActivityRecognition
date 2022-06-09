@@ -4,8 +4,15 @@ import android.annotation.SuppressLint;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.os.Handler;
 
-import com.c_bata.DataFrame;
+import androidx.annotation.NonNull;
+import androidx.lifecycle.LifecycleOwner;
+
+import umu.software.activityrecognition.shared.AndroidUtils;
+import umu.software.activityrecognition.data.accumulators.consumers.ConsumersFactory;
+import umu.software.activityrecognition.data.dataframe.DataFrame;
 
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
@@ -14,31 +21,24 @@ import java.util.function.BiConsumer;
 
 public class SensorAccumulator extends Accumulator<SensorEvent> implements SensorEventListener
 {
-    protected long minDelayMillis;
-    protected Sensor sensor;
-    protected long lastTimestamp = 0L;
+    private final SensorManager mSensorManager;
+    protected Sensor mSensor;
 
-    public SensorAccumulator(long minDelayMillis)
+    private Handler mHandler;
+
+
+    public SensorAccumulator(SensorManager sensorManager, Sensor sensor)
     {
-        this.minDelayMillis = minDelayMillis;
+        mSensorManager = sensorManager;
+        mSensor = sensor;
     }
 
-    public SensorAccumulator()
-    {
-        this.minDelayMillis = 0;
-    }
 
-
-    public void setMinDelayMillis(long minDelayMillis)
-    {
-        this.minDelayMillis = Math.max(0, minDelayMillis);
-    }
 
     @Override
-    public void clearDataFrame()
+    protected String getDataFrameName()
     {
-        super.clearDataFrame();
-        lastTimestamp = 0L;
+        return mSensor.getName().replace(" ", "_");
     }
 
     @Override
@@ -47,11 +47,6 @@ public class SensorAccumulator extends Accumulator<SensorEvent> implements Senso
         accept(event);
     }
 
-    @Override
-    protected boolean filter(SensorEvent event)
-    {
-        return super.filter(event) && (event.timestamp - lastTimestamp) >= minDelayMillis;
-    }
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int i)
@@ -59,10 +54,19 @@ public class SensorAccumulator extends Accumulator<SensorEvent> implements Senso
 
     }
 
+    @Override
+    public long getCurrentTimeMillis(SensorEvent event)
+    {
+        return TimeUnit.MILLISECONDS.convert(event.timestamp, TimeUnit.NANOSECONDS);
+    }
 
+    /**
+     * Returns the sensor being recorded
+     * @return the sensor being recorded
+     */
     public Sensor getSensor()
     {
-        return sensor;
+        return mSensor;
     }
 
 
@@ -71,16 +75,30 @@ public class SensorAccumulator extends Accumulator<SensorEvent> implements Senso
     protected void initializeConsumers(Queue<BiConsumer<SensorEvent, DataFrame.Row>> eventConsumers)
     {
         eventConsumers.add((e, r) -> {
-            r.put("timestamp", TimeUnit.MILLISECONDS.convert(e.timestamp, TimeUnit.NANOSECONDS));
-            r.put("delta_timestamp", TimeUnit.MILLISECONDS.convert(lastTimestamp > 0 ? e.timestamp - lastTimestamp : 0, TimeUnit.NANOSECONDS));
             r.put("accuracy", e.accuracy);
             for (int i = 0; i < e.values.length; i++) {
                 String colname = String.format("f_%s", i);
                 r.put(colname, e.values[i]);
             }
-            lastTimestamp = e.timestamp;
-            this.sensor = e.sensor;
         });
+        eventConsumers.add(ConsumersFactory.newSensorTimestamp());
     }
 
+    @Override
+    protected void startRecording()
+    {
+        mHandler = AndroidUtils.newHandler();
+        mSensorManager.registerListener(
+                this, mSensor,
+                SensorManager.SENSOR_DELAY_NORMAL,
+                mHandler
+        );
+    }
+
+    @Override
+    protected void stopRecording()
+    {
+        mSensorManager.unregisterListener(this);
+        mHandler.getLooper().quitSafely();
+    }
 }

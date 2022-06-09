@@ -1,44 +1,49 @@
 package umu.software.activityrecognition.tflite.model;
 
-import com.c_bata.DataFrame;
+import umu.software.activityrecognition.data.dataframe.DataFrame;
 import com.google.common.collect.Maps;
 
 import org.tensorflow.lite.Interpreter;
 
 import java.nio.FloatBuffer;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
-
+/**
+ * Model that feeds its tensors using dataframes
+ */
 public abstract class DataFrameTFModel extends TFModel
 {
-    private final Map<Integer, DataFrame> dataframes = Maps.newHashMap();
+    private final Map<Integer, DataFrame> inputDataframes = Maps.newHashMap();
 
     /**
-     * @param interpreter a Tensorflow Lite Interpreter
+     * @param name name of the model
+     * @param interpreter Tensorflow Lite Interpreter
      */
-    public DataFrameTFModel(Interpreter interpreter)
+    public DataFrameTFModel(String name, Interpreter interpreter)
     {
-        super(interpreter);
-        for (int i = 0; i < interpreter.getInputTensorCount(); i++)
-            dataframes.put(i, new DataFrame());
+        super(name, interpreter);
     }
 
-
+    /**
+     * Check whether getTensorData() returns data that is suitable to feed the tensors.
+     *  If getTensorData() returns a dataframe with too few rows, or with a wrong number of columns,
+     *  will return false, true otherwise.
+     *  Whenever isInputReady() return false the current computation is skipped
+     * @return whether all input dataframes are ready
+     */
     @Override
     protected boolean isInputReady()
     {
+        for (int i = 0; i < interpreter.getInputTensorCount(); i++)
+            inputDataframes.put(i, new DataFrame());
+
         DataFrame df;
-
-        if (dataframes.size() < interpreter.getInputTensorCount())
-            return false;
-
-        for (Integer tensorNum : dataframes.keySet())
+        for (Integer tensorNum : inputDataframes.keySet())
         {
-            df = getDataFrame(tensorNum);
-            if (df == null || df.size() != inputSize(tensorNum) || (df.countRows() < inputSequenceLength(tensorNum)))
+            df = getInputDataFrame(tensorNum);
+            if (df == null || df.size() != getInputSize(tensorNum) || (df.countRows() < getInputSequenceLength(tensorNum)))
                 return false;
-            dataframes.put(tensorNum, df);
+            inputDataframes.put(tensorNum, df);
         }
         return true;
     }
@@ -46,32 +51,60 @@ public abstract class DataFrameTFModel extends TFModel
     @Override
     protected void writeInputBuffer(int tensorNum, FloatBuffer buffer)
     {
-        DataFrame df = dataframes.get(tensorNum);
+        DataFrame df = inputDataframes.get(tensorNum);
         assert df != null;
-        double elapsedTime = df.get("delta_timestamp").stream().mapToDouble(a -> Double.parseDouble(a.toString())).sum();
 
-        //Log.i("PredictTemplate", "Time window: "+elapsedTime);
-        //int dfSize = df.size() * df.countRows();
-        //if (dfSize != buffer.capacity())
-        //    Log.e("", "dfSize != buffer.capacity()");
+        while(df.countRows() > getInputSequenceLength(tensorNum))
+            df.popFirstRow();
 
-        AtomicInteger addedRows = new AtomicInteger(0);
-        df.forEachRow(objects -> {
-            if (addedRows.get() >= inputSequenceLength(tensorNum))
-                return null;
-
+        df.forEachRowArray(objects -> {
             for (Object o : objects)
                 buffer.put(Float.parseFloat(o.toString()));
-            addedRows.addAndGet(1);
-
             return null;
         });
     }
 
+
     /**
-     * Getter for the dataframe for the given tensor number
+     * Get all output dataframes
+     * @return mapping between output tensors id and dataframes, or null if the model is not ready
+     * eg. by not having enough input
+     */
+    public Map<Integer, DataFrame> getOutputDataFrames()
+    {
+        boolean success = predict();
+        if (!success) return null;
+        Map<Integer, DataFrame> result = Maps.newHashMap();
+        for (int i = 0; i < getOutputTensorCount(); i++)
+            result.put(i, getOutputDataFrame(i));
+        return result;
+    }
+
+
+    /**
+     * Getter for the dataframe for the given tensor number. The dataframe contains the currently avaialabe
+     * data for the tensor. If insufficient in number of rows, isInputReady() will return false.
      * @param tensorNum the tensor of the dataset
      * @return the dataframe or null if there is an error
      */
-    protected abstract DataFrame getDataFrame(int tensorNum);
+    protected abstract DataFrame getInputDataFrame(int tensorNum);
+
+
+    public DataFrame getOutputDataFrame(int i)
+    {
+        int seqLen = getOutputSequenceLength(i);
+        int outSize = getOutputSize(i);
+
+        FloatBuffer buffer = getOutput(i);
+        buffer.rewind();
+        DataFrame df = new DataFrame(String.format("%s:%s", getName(), i));
+        for (int j = 0; j < seqLen; j++)
+        {
+            DataFrame.Row row = new DataFrame.Row();
+            for (int k = 0; k < outSize; k++)
+                row.put(String.format("f_%s", k), buffer.get());
+            df.appendRow(row);
+        }
+        return df;
+    }
 }

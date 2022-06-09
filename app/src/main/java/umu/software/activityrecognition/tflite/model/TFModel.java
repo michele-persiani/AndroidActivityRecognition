@@ -10,16 +10,16 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import umu.software.activityrecognition.common.FunctionLock;
 
 /**
  * Template for invoking a Tensorflow Lite model. For the moment it supports only
- * input-outputs in the form of sequences, so with tensor shapes of 2 dimensions. eg (seq_len, num_features)
+ * input-outputs in the form of sequences, so with tensor shapes of 2 dimensions (seq_len, num_features)
  */
 public abstract class TFModel
 {
     protected final Interpreter interpreter;
-    private final FunctionLock lock = FunctionLock.make();
+    private final Object syncToken = new Object();
+    private final String name;
 
     private FloatBuffer[] inputs;
     private HashMap<Integer, FloatBuffer> outputs;
@@ -28,10 +28,20 @@ public abstract class TFModel
      *
      * @param interpreter a Tensorflow Lite Interpreter
      */
-    public TFModel(Interpreter interpreter)
+    public TFModel(String name, Interpreter interpreter)
     {
+        this.name = name;
         this.interpreter = interpreter;
         makeBuffers();
+    }
+
+    /**
+     *
+     * @return the name of this model
+     */
+    public String getName()
+    {
+        return name;
     }
 
     /**
@@ -81,8 +91,8 @@ public abstract class TFModel
     private FloatBuffer makeInputFloatBuffer(int tensorNum)
     {
 
-        int size = inputSize(tensorNum);
-        int seq_len = inputSequenceLength(tensorNum);
+        int size = getInputSize(tensorNum);
+        int seq_len = getInputSequenceLength(tensorNum);
 
         return FloatBuffer.allocate(size * seq_len);
     }
@@ -95,8 +105,8 @@ public abstract class TFModel
      */
     private FloatBuffer makeOutputFloatBuffer(int tensorNum)
     {
-        int size = outputSize(tensorNum);
-        int seq_len = outputSequenceLength(tensorNum);
+        int size = getOutputSize(tensorNum);
+        int seq_len = getOutputSequenceLength(tensorNum);
 
         return FloatBuffer.allocate(size * seq_len);
     }
@@ -111,20 +121,21 @@ public abstract class TFModel
         int inputsCount = interpreter.getInputTensorCount();
         int outputsCount = interpreter.getOutputTensorCount();
 
-        if (!isInputReady())
-            return false;
-
-        for (int i = 0; i < inputsCount; i++)
+        synchronized (syncToken)
         {
-            FloatBuffer buffer  = inputs[i];
-            buffer.rewind();
-            writeInputBuffer(i, buffer);
-            buffer.rewind();
-        }
+            if (!isInputReady())
+                return false;
 
-        Map<Integer, Object> outMap = Maps.newHashMap();
+            for (int i = 0; i < inputsCount; i++)
+            {
+                FloatBuffer buffer  = inputs[i];
+                buffer.rewind();
+                writeInputBuffer(i, buffer);
+                buffer.rewind();
+            }
 
-        lock.withLock(() -> {
+            Map<Integer, Object> outMap = Maps.newHashMap();
+
             for (int i = 0; i < outputsCount; i++)
             {
                 FloatBuffer buffer  = outputs.get(i);
@@ -132,33 +143,27 @@ public abstract class TFModel
                 outMap.put(i, buffer);
             }
             interpreter.runForMultipleInputsOutputs(inputs, outMap);
-        });
-        return true;
+            return true;
+        }
     }
 
     /**
-     * Get the nth output as a sequence of vectors. To be called after a successful predict() to read
-     * the outputs
+     * Get the nth output as a FloatBuffer. To be called after a successful predict() to read
+     * the output
      * @param outputNum the output of the model to fetch
-     * @return the value of the nth output of the model as a sequence of vectors
+     * @return the FloatBuffer of the nth output of the model
      */
-    public float[][] getOutput(int outputNum)
+
+    public FloatBuffer getOutput(int outputNum)
     {
-       assert 0 >= outputNum && outputNum < interpreter.getOutputTensorCount();
-
-        FloatBuffer buffer = lock.withLock(() -> outputs.get(outputNum).duplicate());
-
-        int seqLen = outputSequenceLength(outputNum);
-        int outSize = outputSize(outputNum);
-        float[][] res = new float[seqLen][outSize];
-
+        assert 0 >= outputNum && outputNum < interpreter.getOutputTensorCount();
+        FloatBuffer buffer;
+        synchronized (syncToken)
+        {
+            buffer = outputs.get(outputNum).duplicate();
+        }
         buffer.rewind();
-        for (int i=0; i < seqLen;i++)
-            for (int j = 0; j < outSize; j++)
-                res[i][j] = buffer.get();
-
-
-        return res;
+        return buffer;
     }
 
 
@@ -167,7 +172,7 @@ public abstract class TFModel
      * @param tensorNum number of the tensor
      * @return its size as the number of features of the last dimension
      */
-    public int inputSize(int tensorNum)
+    public int getInputSize(int tensorNum)
     {
         int[] shape = interpreter.getInputTensor(tensorNum).shape();
         return shape[shape.length - 1];
@@ -190,7 +195,7 @@ public abstract class TFModel
      * @param tensorNum  number of the tensor
      * @return length of the input sequences
      */
-    public int inputSequenceLength(int tensorNum)
+    public int getInputSequenceLength(int tensorNum)
     {
         if (!isSequenceInput(tensorNum)) return 1;
         int[] shape = interpreter.getInputTensor(tensorNum).shape();
@@ -204,7 +209,7 @@ public abstract class TFModel
      * @param tensorNum number of the tensor
      * @return the tensor size
      */
-    public int outputSize(int tensorNum)
+    public int getOutputSize(int tensorNum)
     {
         int[] shape = interpreter.getOutputTensor(tensorNum).shape();
         return shape[shape.length - 1];
@@ -228,14 +233,12 @@ public abstract class TFModel
      * @param tensorNum  number of the tensor
      * @return length of the input sequences
      */
-    public int outputSequenceLength(int tensorNum)
+    public int getOutputSequenceLength(int tensorNum)
     {
         if (!isSequenceOutput(tensorNum)) return 1;
         int[] shape = interpreter.getOutputTensor(tensorNum).shape();
         return shape[shape.length-2];
     }
-
-
 
     /**
      * Tests whether the underlying implementation is ready to supplying all the inputs to the Tensorflow Lite model

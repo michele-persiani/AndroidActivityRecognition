@@ -1,10 +1,67 @@
 <resources>
     <string name="app_name">Activity Recognition</string>
+    <string name="chatbot_activity_name">Chatbot</string>
 
+    <string name="activity_recognition_watchface_name">Activity Recognition</string>
+    <string name="som_watchface_name">Self Organizing Map</string>
+    <string name="chatbot_watchface_name">Chatbot</string>
+
+
+
+    <!-- RecordService notification text -->
     <string name="notification_title">Activity Recognition</string>
     <string name="notification_text">Recording from sensors</string>
     <string name="notification_channel_id">Activity Recognition</string>
+
+    <!-- Preferences keys -->
+
+    <string name="save_interval_minutes">save_interval_minutes</string>
+    <string name="save_models_interval_minutes">model_recording_interval</string>
+    <string name="read_sensor_delay_millis">read_sensor_delay_millis</string>
+    <string name="read_models_delay_millis">read_models_delay_millis</string>
+    <string name="recordings_use_wake_lock">recordings_use_wake_lock</string>
+
+
+    <string name="chatbot_language">chatbot_language</string>
+    <string name="chatbot_voice_speed">chatbot_voice_speed</string>
+    <string name="chatbot_send_recurrent_event">chatbot_send_recurrent_event</string>
+    <string name="chatbot_recurrent_event_minutes">chatbot_recurrent_event_minutes</string>
+    <string name="chatbot_recurrent_event_name">chatbot_recurrent_event_name</string>
+
+
+
+
+
+
+    <!-- Inside SensorRecordingsFragment -->
+    <string name="category_recordings">Recordings</string>
+    <string name="recorded_sensors">recorded_sensors</string>
+    <string name="recorded_sensors_title">Recorded sensors</string>
+    <string name="recorded_sensors_summary">Select which sensors are recorded</string>
+
+    <string name="save_interval_title">Save interval</string>
+    <string name="save_interval_summary">Select how often to save the recordings</string>
+    <string name="read_sensor_delay_title">Sensors readings delay</string>
+    <string name="read_sensor_delay_summary">Select the delay in between recordings from the sensors</string>
+    <string name="save_models_interval_title">Models save interval</string>
+    <string name="save_models_interval_summary">Select how often to save model recordings</string>
+    <string name="read_models_delay_title">Models readings delay</string>
+    <string name="read_models_delay_summary">Select the delay in between recordings from the models</string>
+    <string name="recordings_use_wake_lock_title">Use wake lock</string>
+    <string name="recordings_use_wake_lock_summary">Keep the device\'s CPU active while recording</string>
+
+    <string name="category_chatbot">Chatbot</string>
+
+    <string name="chatbot_language_title">Language</string>
+    <string name="chatbot_language_summary">Select the chatbot\'s language</string>
+    <string name="chatbot_voice_speed_title">Voice speed</string>
+    <string name="chatbot_voice_speed_summary">Select the chatbot\'s voice speed</string>
+    <string name="chatbot_send_recurrent_event_key">Autonomously ask questions</string>
+    <string name="chatbot_send_recurrent_event_summary">Whether the chatbot should ask you question while active</string>
+    <string name="chatbot_recurrent_event_minutes_key">Questions intervals</string>
+    <string name="chatbot_recurrent_event_minutes_summary">Time interval between a set of questions and the other</string>
+
+    <!-- Misc -->
     <string name="request_user_classification">What are you doing?</string>
-    <string name="activity_recognition_watchface_name">Activity Recognition</string>
-    <string name="som_watchface_name">Activity Recognition</string>
+
 </resources>

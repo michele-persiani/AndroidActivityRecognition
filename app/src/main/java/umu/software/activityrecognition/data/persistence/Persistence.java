@@ -3,27 +3,31 @@ package umu.software.activityrecognition.data.persistence;
 import android.app.Activity;
 import android.os.Environment;
 
-import java.io.File;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.Callable;
 
-import umu.software.activityrecognition.common.permissions.Permissions;
-import umu.software.activityrecognition.data.persistence.tasks.DeleteFolderAsynTask;
-import umu.software.activityrecognition.data.persistence.tasks.SensorDeleteFileAsyncTask;
-import umu.software.activityrecognition.data.persistence.tasks.SensorFileWriterAsyncTask;
-import umu.software.activityrecognition.data.persistence.tasks.SensorIncrementalZipAsyncTask;
-import umu.software.activityrecognition.data.accumulators.SensorAccumulator;
+import umu.software.activityrecognition.shared.permissions.Permissions;
+import umu.software.activityrecognition.data.dataframe.DataFrame;
+import umu.software.activityrecognition.data.persistence.tasks.DataFrameDeleteFileAsyncTask;
+import umu.software.activityrecognition.data.persistence.tasks.DataFrameFileWriterAsyncTask;
+import umu.software.activityrecognition.data.persistence.tasks.DataFrameIncrementalZipAsyncTask;
+import umu.software.activityrecognition.data.persistence.tasks.DeleteFolderAsyncTask;
+
 
 public enum Persistence
 {
-    DOCUMENTS_FOLDER(
-            String.format(
-                    "%s%s%s",
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).getAbsolutePath(),
-                    File.separator,
-                    "Sensor Readings"
-            )
+    SENSORS_FOLDER(Paths.get(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).getAbsolutePath(),
+            "Sensor Readings"
+    ).toString()
+    ),
+
+    ACTIVITY_FOLDER(Paths.get(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).getAbsolutePath(),
+            "Activity Recordings"
+    ).toString()
     );
 
 
@@ -43,52 +47,59 @@ public enum Persistence
     }
 
 
-    public Callable<Integer> saveToFile(Collection<SensorAccumulator> sensors, boolean resetSensors)
+    public Callable<Integer> saveToFile(Collection<DataFrame> dataframes)
     {
-        SensorFileWriterAsyncTask writer = new SensorFileWriterAsyncTask(sensorFolder, resetSensors);
-        writer.execute(filterInitialized(sensors));
+        DataFrameFileWriterAsyncTask writer = new DataFrameFileWriterAsyncTask(sensorFolder);
+        writer.execute(filterInitialized(dataframes));
+        return writer::get;
+    }
+
+
+    public Callable<Integer> createIncrementalZip(Collection<DataFrame> dataframes)
+    {
+        DataFrameIncrementalZipAsyncTask writer = new DataFrameIncrementalZipAsyncTask(sensorFolder, 16384);
+        writer.execute(filterInitialized(dataframes));
 
         return writer::get;
     }
 
 
-    public Callable<Integer> createIncrementalZip(Collection<SensorAccumulator> sensors)
+
+    public Callable<Integer> createIncrementalZip(String zipPrefix, Collection<DataFrame> dataframes)
     {
-        SensorIncrementalZipAsyncTask writer = new SensorIncrementalZipAsyncTask(sensorFolder, 16384);
-        writer.execute(filterInitialized(sensors));
+        DataFrameIncrementalZipAsyncTask writer = new DataFrameIncrementalZipAsyncTask(sensorFolder, zipPrefix, 16384);
+        writer.execute(filterInitialized(dataframes));
 
         return writer::get;
     }
 
-
-    public Callable<Integer> deleteFiles(Collection<SensorAccumulator> sensors)
+    public Callable<Integer> deleteFiles(Collection<DataFrame> dataframes)
     {
-        SensorDeleteFileAsyncTask task = new SensorDeleteFileAsyncTask(sensorFolder);
-        task.execute(filterInitialized(sensors));
+        DataFrameDeleteFileAsyncTask task = new DataFrameDeleteFileAsyncTask(sensorFolder);
+        task.execute(filterInitialized(dataframes));
         return task::get;
-
     }
 
 
     public Callable<Integer> deleteSaveFolder()
     {
-        DeleteFolderAsynTask task = new DeleteFolderAsynTask();
+        DeleteFolderAsyncTask task = new DeleteFolderAsyncTask();
         task.execute(sensorFolder);
         return task::get;
 
     }
 
-    private SensorAccumulator[] filterInitialized(Collection<SensorAccumulator> sensors)
+    private DataFrame[] filterInitialized(Collection<DataFrame> dataframes)
     {
-        Object[] accumsArray = sensors
+        Object[] dfArray = dataframes
                 .stream()
-                .filter((s) -> s.getDataFrame().countRows() > 0)
+                .filter((df) -> df.countRows() > 0)
                 .toArray();
 
         return Arrays.copyOf(
-                accumsArray,
-                accumsArray.length,
-                SensorAccumulator[].class
+                dfArray,
+                dfArray.length,
+                DataFrame[].class
         );
     }
 

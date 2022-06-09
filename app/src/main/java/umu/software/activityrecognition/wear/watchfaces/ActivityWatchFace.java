@@ -22,14 +22,14 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 
-public class ActivityWatchFace extends CanvasWatchFaceService implements Callable<Map<String, Float>>
+public class ActivityWatchFace extends CanvasWatchFaceService implements Supplier<Map<String, Float>>
 {
     Engine mEngine = null;
 
@@ -48,7 +48,7 @@ public class ActivityWatchFace extends CanvasWatchFaceService implements Callabl
     }
 
     @Override
-    public Map<String, Float> call()
+    public Map<String, Float> get()
     {
         Map<String, Float> activities = new HashMap<>();
         for (int i = 0; i < mDummyValues.length; i++)
@@ -100,10 +100,10 @@ public class ActivityWatchFace extends CanvasWatchFaceService implements Callabl
         boolean mUpdating = true;
         private Thread mUpdateThread = null;
 
-        Callable<Map<String, Float>> mActivitiesCallable;
+        Supplier<Map<String, Float>> mActivitiesCallable;
 
 
-        Engine(Callable<Map<String, Float>> activitiesCallable)
+        Engine(Supplier<Map<String, Float>> activitiesCallable)
         {
             mActivitiesCallable = activitiesCallable;
         }
@@ -152,8 +152,6 @@ public class ActivityWatchFace extends CanvasWatchFaceService implements Callabl
                     super.onTapCommand(tapType, x, y, eventTime);
                     break;
             }
-
-            //Toast.makeText(getApplicationContext(), "Hello!", Toast.LENGTH_SHORT).show();
         }
 
 
@@ -246,13 +244,7 @@ public class ActivityWatchFace extends CanvasWatchFaceService implements Callabl
         {
             if (mActivitiesCallable == null)
                 return;
-            Map<String, Float> activities;
-            try {
-                activities = mActivitiesCallable.call();
-            } catch (Exception e) {
-                e.printStackTrace();
-                return;
-            }
+            Map<String, Float> activities = mActivitiesCallable.get();
             setActivities(activities, true);
             invalidate();
         }

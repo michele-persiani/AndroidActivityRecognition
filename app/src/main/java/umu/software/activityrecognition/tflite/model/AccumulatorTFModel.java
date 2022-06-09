@@ -1,40 +1,49 @@
 package umu.software.activityrecognition.tflite.model;
 
-import com.c_bata.DataFrame;
-import com.google.common.collect.Maps;
+import androidx.annotation.NonNull;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.LifecycleRegistry;
+
+import umu.software.activityrecognition.data.accumulators.Accumulator;
+import umu.software.activityrecognition.data.accumulators.AccumulatorsLifecycle;
+import umu.software.activityrecognition.data.dataframe.DataFrame;
 
 import org.tensorflow.lite.Interpreter;
 
-import java.util.Map;
-
-import umu.software.activityrecognition.data.accumulators.Accumulator;
+import java.util.List;
 
 
 /**
- * Implementation of the predict template that uses the accumulators
+ * Implementation of the TFModel template that utilizes an AccumulatorManager to get the input dataframes.
+ * The accumulator manager is to be externally initialized, and the keys utilized to get the dataframes
+ * are the incremental tensor indices 0-(N-1), where N is the number of input tensors.
  */
-public class AccumulatorTFModel extends DataFrameTFModel
+public class AccumulatorTFModel extends DataFrameTFModel implements LifecycleOwner
 {
+    private final AccumulatorsLifecycle accumulatorManager;
 
-    Map<Integer, Accumulator<?>> accumulators;            // Map (tensor_num, accumulator)
 
-
-    public AccumulatorTFModel(Interpreter interpreter)
+    public AccumulatorTFModel(String name, Interpreter interpreter, List<Accumulator<?>> accumulators)
     {
-        super(interpreter);
-        accumulators = Maps.newHashMap();
+        super(name, interpreter);
+        accumulatorManager = new AccumulatorsLifecycle();
+
+        assert accumulators.size() == getInputTensorCount();
+        for (int i = 0; i < getInputTensorCount(); i++)
+            accumulatorManager.put(i, accumulators.get(i));
     }
 
 
-    public void setAccumulator(int tensorNum, Accumulator<?> accumulator)
+    protected DataFrame getInputDataFrame(int tensorNum)
     {
-        accumulators.put(tensorNum, accumulator);
+        assert accumulatorManager.containsKey(tensorNum);
+        return accumulatorManager.getDataFrame(tensorNum);
     }
 
-
-    protected DataFrame getDataFrame(int tensorNum)
+    @NonNull
+    @Override
+    public LifecycleRegistry getLifecycle()
     {
-        assert accumulators.containsKey(tensorNum);
-        return accumulators.get(tensorNum).getDataFrame();
+        return accumulatorManager.getLifecycle();
     }
 }

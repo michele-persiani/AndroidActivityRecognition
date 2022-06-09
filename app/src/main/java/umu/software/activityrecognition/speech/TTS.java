@@ -4,32 +4,39 @@ import android.content.Context;
 import android.os.Handler;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
+import android.speech.tts.Voice;
 import android.util.Log;
 
-import java.util.Locale;
-import java.util.concurrent.Semaphore;
+import com.google.api.client.util.Lists;
 
-import umu.software.activityrecognition.common.AndroidUtils;
-import umu.software.activityrecognition.common.lifecycles.LifecycleElement;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.function.Predicate;
+
+import umu.software.activityrecognition.shared.AndroidUtils;
 
 /**
- * Text-to-Speech singleton for the device. To be used together with LifecycleActivity
- * or LifecycleService
+ * Text-to-Speech singleton for the device.
+ *
  */
-public enum TTS implements LifecycleElement
+public enum TTS
 {
     INSTANCE;
 
-
     private TextToSpeech mTextToSpeech;
-    Locale mLocale = Locale.getDefault();
-    boolean mInitialized = false;
-    boolean mInitializing = false;
+    private boolean mInitialized = false;
+    private boolean mInitializing = false;
 
-    Handler mHandler;
+    private Handler mHandler;
 
-    @Override
-    public void onCreate(Context context)
+    private Voice mVoice;
+    private Locale mLanguage = Locale.getDefault();
+    private boolean mTalking = false;
+
+
+
+    public void initialize(Context context)
     {
         if (mInitialized || mInitializing)
             return;
@@ -38,32 +45,20 @@ public enum TTS implements LifecycleElement
         mTextToSpeech = new TextToSpeech(context, status -> {
             if(status != TextToSpeech.ERROR)
             {
-                mTextToSpeech.setLanguage(mLocale);
+                mTextToSpeech.setLanguage(mLanguage);
                 Log.i("TTS", "TTS successfully initialized");
                 mInitialized = true;
                 mInitializing = false;
+                if(mVoice == null)
+                    mVoice = mTextToSpeech.getDefaultVoice();
+                setVoice(mVoice);
             }
             else
                 Log.e("TTS", "Error while initializing TTS");
-        });
-
-
+        }, "com.google.android.tts");
     }
 
-    @Override
-    public void onStart(Context context)
-    {
-
-    }
-
-    @Override
-    public void onStop(Context context)
-    {
-
-    }
-
-    @Override
-    public void onDestroy(Context context)
+    public void destroy()
     {
         if (!mInitialized)
             return;
@@ -75,33 +70,146 @@ public enum TTS implements LifecycleElement
         mHandler = null;
     }
 
-    public TTS say(String prompt, UtteranceProgressListener callback)
+
+
+    public boolean isTalking()
+    {
+        return mTalking;
+    }
+
+
+    public void say(String prompt, Translator translator, UtteranceProgressListener callback)
     {
         mHandler.post(() -> {
-            if (!mInitialized)
+            String utternaceId = TTS.class.getName();
+            String translatedPrompt = prompt;
+            Locale currentLanguage = getLanguage();
+
+            if (!mInitialized || (translator != null && !translator.isInitialized()))
             {
-                callback.onError("null", TextToSpeech.ERROR_NOT_INSTALLED_YET);
+                callback.onError(utternaceId, TextToSpeech.ERROR);
                 return;
             }
-            mTextToSpeech.setOnUtteranceProgressListener(callback);
-            mTextToSpeech.speak(prompt, TextToSpeech.QUEUE_FLUSH, null, TTS.class.getName());
+            setVoice(mVoice);
+            if (translator != null)
+            {
+                translatedPrompt = translator.translate(prompt);
+                setLanguage(translator.getTargetLanguage());
+            }
+            mTextToSpeech.setOnUtteranceProgressListener(getListener(callback));
+            mTextToSpeech.speak(translatedPrompt, TextToSpeech.QUEUE_FLUSH, null, utternaceId);
+            setLanguage(currentLanguage);
         });
-        return this;
     }
 
 
-    public TTS say(String prompt)
+    public void say(String prompt, UtteranceProgressListener callback)
     {
-        return say(prompt, null);
+        say(prompt, null, callback);
     }
 
-    public TTS setLocale(Locale locale)
+
+    /**
+     * Sets the language of the speech. A null value will set the default language.
+     * Note that language and voice can be set independently.
+     * @param locale the language of the speech
+     */
+    public void setLanguage(Locale locale)
     {
-        mHandler.post(() -> {
-            if (!mInitialized)
-                return;
+        mLanguage = (locale != null)? locale : Locale.getDefault();
+        if (mInitialized)
             mTextToSpeech.setLanguage(locale);
-        });
-        return this;
+    }
+
+    /**
+     * Gets the language currently in use
+     * @return the language currently in use
+     */
+    public Locale getLanguage()
+    {
+        return mLanguage;
+    }
+
+
+    /**
+     * Get the available voices
+     * @param filter optional filter to filter returned voices. Can be null
+     * @return list of available voices
+     */
+    public List<Voice> getAvailableVoices(Predicate<Voice> filter)
+    {
+        if (mTextToSpeech == null)
+            return Lists.newArrayList();
+        if (filter == null)
+            filter = (v) -> true;
+        Set<Voice> voices = mTextToSpeech.getVoices();
+        if (voices == null)
+            return Lists.newArrayList();
+        return Lists.newArrayList(voices.stream().filter(filter).iterator());
+    }
+
+    /**
+     * Sets the voice and the language using the voice's language
+     * @param voice the voice (and language) to use
+     */
+    public void setVoice(Voice voice)
+    {
+        mVoice = voice;
+        mLanguage = voice.getLocale();
+        if (mTextToSpeech != null)
+            mTextToSpeech.setVoice(voice);
+    }
+
+    /**
+     * Sets the voice to use by its name. The name will be matched with names from the voices returned by getAvailableVoices(null)
+     * @param voiceName the name of the voice
+     */
+    public void setVoice(String voiceName)
+    {
+        List<Voice> voices = getAvailableVoices(null);
+        for (Voice v : voices)
+            if(v.getName().equals(voiceName))
+                setVoice(v);
+    }
+
+
+    public void setSpeechRate(float speechRate)
+    {
+        if (mTextToSpeech != null)
+            mTextToSpeech.setSpeechRate(Math.max(0, speechRate));
+    }
+
+
+    public Voice getCurrentVoice()
+    {
+        return mVoice;
+    }
+
+
+    private UtteranceProgressListener getListener(UtteranceProgressListener wrapped)
+    {
+        return new UtteranceProgressListener()
+        {
+            @Override
+            public void onStart(String s)
+            {
+                mTalking = true;
+                if (wrapped != null) wrapped.onStart(s);
+            }
+
+            @Override
+            public void onDone(String s)
+            {
+                mTalking = false;
+                if (wrapped != null) wrapped.onDone(s);
+            }
+
+            @Override
+            public void onError(String s)
+            {
+                mTalking = false;
+                if (wrapped != null) wrapped.onError(s);
+            }
+        };
     }
 }

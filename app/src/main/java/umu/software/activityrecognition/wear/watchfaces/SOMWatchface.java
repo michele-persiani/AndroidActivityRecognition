@@ -1,6 +1,5 @@
 package umu.software.activityrecognition.wear.watchfaces;
 
-import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -14,28 +13,39 @@ import android.support.wearable.watchface.WatchFaceStyle;
 import android.view.SurfaceHolder;
 
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import androidx.lifecycle.Lifecycle;
 
-import umu.software.activityrecognition.common.AndroidUtils;
-import umu.software.activityrecognition.tflite.SensorTensorflowLiteModels;
+import com.google.common.collect.Maps;
+import com.google.common.primitives.Floats;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+
+import umu.software.activityrecognition.shared.AndroidUtils;
+import umu.software.activityrecognition.data.dataframe.DataFrame;
+import umu.software.activityrecognition.tflite.TFLiteNamedModels;
+import umu.software.activityrecognition.tflite.model.AccumulatorTFModel;
 
 public class SOMWatchface extends CanvasWatchFaceService
 {
     Engine mEngine = null;
-    SensorTensorflowLiteModels mModel = SensorTensorflowLiteModels.SOM;
+    AccumulatorTFModel mModel;
     private PowerManager.WakeLock mWakeLock;
+    private long mPredictionTime = 0L;
 
     @Override
     public void onCreate()
     {
         super.onCreate();
-        mWakeLock = AndroidUtils.getWakeLock(this, PowerManager.SCREEN_BRIGHT_WAKE_LOCK);
+        mWakeLock = AndroidUtils.getWakeLock(this, PowerManager.PARTIAL_WAKE_LOCK);
         mWakeLock.acquire(10*60*1000L /*10 minutes*/);
 
-        mModel.onCreate(this);
-        mModel.onStart(this);
+        mModel = TFLiteNamedModels.SOM.newInstance(this);
+        mModel.getLifecycle().handleLifecycleEvent(Lifecycle.Event.ON_CREATE);
+        mModel.getLifecycle().handleLifecycleEvent(Lifecycle.Event.ON_START);
+
     }
 
 
@@ -44,8 +54,8 @@ public class SOMWatchface extends CanvasWatchFaceService
     {
         super.onDestroy();
         mWakeLock.release();
-        mModel.onStop(this);
-        mModel.onDestroy(this);
+        mModel.getLifecycle().handleLifecycleEvent(Lifecycle.Event.ON_STOP);
+        mModel.getLifecycle().handleLifecycleEvent(Lifecycle.Event.ON_DESTROY);
     }
 
     @Override
@@ -64,14 +74,21 @@ public class SOMWatchface extends CanvasWatchFaceService
         Bitmap mBitmap = null;
         private boolean mUpdateCanvas = true;
         Handler mHandler = AndroidUtils.newMainLooperHandler();
-        long mUpdateMillis = 50;
-
+        long mUpdateMillis = 100;
+        float mBitmapPercSize = 0.7f;
 
         @Override
         public void onCreate(SurfaceHolder holder)
         {
             super.onCreate(holder);
             onUpdate();
+        }
+
+        @Override
+        public void onDestroy()
+        {
+            super.onDestroy();
+            mUpdateCanvas = false;
         }
 
         @Override
@@ -88,21 +105,46 @@ public class SOMWatchface extends CanvasWatchFaceService
             super.onDraw(canvas, bounds);
             if (mBitmap != null)
             {
-                canvas.drawBitmap(mBitmap, null, getOval(bounds, .7f), null);
+                RectF dest = getOval(bounds, mBitmapPercSize);
+                canvas.drawBitmap(mBitmap, null, dest, null);
+                drawPredictionTime(canvas, dest.left, dest.top);
             }
         }
 
+        private void drawPredictionTime(Canvas canvas, float x, float y)
+        {
+            String text = String.valueOf(mPredictionTime);
+            Paint textPaint = new Paint();
+            Rect textBounds = new Rect();
+            textPaint.setColor(Color.GREEN);
+            textPaint.setTextSize(20);
+            textPaint.getTextBounds(text, 0, text.length(), textBounds);
+            float text_height =  textBounds.height();
+            canvas.drawText(text, x, y + text_height , textPaint);
+        }
+
+        private float[] toArray(DataFrame df)
+        {
+            Object[] row = df.getRowArray(0);
+            float[] res = new float[row.length];
+            for (int i = 0; i < row.length; i++)
+                res[i] = Float.parseFloat(row[i].toString());
+            return res;
+        }
 
         private boolean updateBitmap()
         {
-            boolean success = mModel.predict();
-            if (!success) return false;
-            float[] output = mModel.getOutput(0)[0];
+            Map<Integer, DataFrame> outputs = Maps.newHashMap();
 
-            ArrayList<Float> outputList = new ArrayList<>(output.length);
-            for (float v : output)
-                outputList.add(v);
-            float max = Collections.max(outputList);
+            mPredictionTime = AndroidUtils.measureElapsedTime(() -> {
+                Map<Integer, DataFrame> modelOutputs = mModel.getOutputDataFrames();
+                if (modelOutputs != null)
+                    outputs.putAll(modelOutputs);
+            });
+            if (outputs.size() == 0)
+                return false;
+
+            float[] output = toArray(outputs.get(0));
 
 
             double outputSize = output.length;
@@ -112,17 +154,41 @@ public class SOMWatchface extends CanvasWatchFaceService
             int bitmapSize = (int)outputSize;
 
             Bitmap bitmap = Bitmap.createBitmap(bitmapSize, bitmapSize, Bitmap.Config.ARGB_8888);
+            //Log.i(getClass().getSimpleName(), Arrays.toString(output));
 
+            int[][] rgb = getRGB(output);
+            int k;
             for (int i = 0; i < bitmapSize; i++)
                 for(int j = 0; j < bitmapSize; j++)
                 {
-                    float v = output[i*bitmapSize + j];
-                    int r = (int) (255 * v / max);
-                    int b = (int) (255 * (1- v / max));
-                    bitmap.setPixel(i, j, Color.rgb(r, 0, b));
+                    k = i * bitmapSize + j;
+                    bitmap.setPixel(i, j, Color.rgb(rgb[0][k], rgb[1][k], rgb[2][k]));
                 }
+
             mBitmap = bitmap;
             return true;
+        }
+
+        private int[][] getRGB(float[] somValues)
+        {
+            int[] r = new int[somValues.length];
+            int[] g = new int[somValues.length];
+            int[] b = new int[somValues.length];
+
+            List<Float> outputList = Floats.asList(somValues);
+            float max = Collections.max(outputList);
+            float min = Collections.min(outputList);
+
+            Function<Float, Double> norm = (v) -> 1 - Math.pow((v - min) / (max - min), 2);
+
+            for (int i = 0; i < somValues.length; i++) {
+                float v = somValues[i];
+                r[i] = (int) (255 * norm.apply(v));
+                g[i] = (somValues[i] <= min + 0.1)? 255 : 0;
+                b[i] = 255 - r[i];
+            }
+            int[][] rgb = new int[][]{r, g, b};
+            return rgb;
         }
 
 
@@ -139,7 +205,7 @@ public class SOMWatchface extends CanvasWatchFaceService
         public void onAmbientModeChanged(boolean inAmbientMode)
         {
             super.onAmbientModeChanged(inAmbientMode);
-            mUpdateCanvas = !inAmbientMode;
+            //mUpdateCanvas = !inAmbientMode;
         }
 
         @Override

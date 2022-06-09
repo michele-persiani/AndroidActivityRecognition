@@ -1,12 +1,12 @@
 package umu.software.activityrecognition.data.persistence.tasks;
 
-import com.c_bata.DataFrame;
+import umu.software.activityrecognition.data.dataframe.DataFrame;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import umu.software.activityrecognition.common.persistence.FileWriterAsyncTask;
+import umu.software.activityrecognition.shared.asynctasks.FileWriterAsyncTask;
 import umu.software.activityrecognition.data.accumulators.SensorAccumulator;
 
 public class SensorFileWriterAsyncTask extends FileWriterAsyncTask<SensorAccumulator>

@@ -4,6 +4,7 @@ package umu.software.activityrecognition.views;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,18 +14,15 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import umu.software.activityrecognition.R;
-import umu.software.activityrecognition.data.accumulators.SensorAccumulators;
 import umu.software.activityrecognition.data.accumulators.SensorAccumulator;
-import umu.software.activityrecognition.data.accumulators.SensorAccumulatorManager;
 
 public class SensorListAdapter extends RecyclerView.Adapter<SensorListAdapter.ViewHolder> {
 
-    protected final SensorAccumulatorManager sensorManager;
+    protected final SensorManager sensorManager;
 
 
     public class ViewHolder extends RecyclerView.ViewHolder implements SensorEventListener
@@ -32,13 +30,29 @@ public class SensorListAdapter extends RecyclerView.Adapter<SensorListAdapter.Vi
         TextView textView;
         Button button;
         SensorAccumulator accumulator;
+        boolean registered = false;
 
-
-        public ViewHolder(@NonNull View itemView) {
+        public ViewHolder(View itemView) {
             super(itemView);
             textView = this.itemView.findViewById(R.id.textView);
             button = itemView.findViewById(R.id.button);
-            accumulator = SensorAccumulators.newFactory().make();
+        }
+
+        public void register(int sensorNum)
+        {
+            Sensor sensor = sensorManager.getSensorList(Sensor.TYPE_ALL).get(sensorNum);
+            accumulator = new SensorAccumulator(sensorManager, sensor);
+            accumulator.setMinDelayMillis(50);
+            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+            sensorManager.registerListener(accumulator, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+            registered = true;
+        }
+
+        public void unregister()
+        {
+            sensorManager.unregisterListener(this);
+            sensorManager.unregisterListener(accumulator);
+            registered = false;
         }
 
         public void setButtonCallback(View.OnClickListener l)
@@ -70,7 +84,7 @@ public class SensorListAdapter extends RecyclerView.Adapter<SensorListAdapter.Vi
     }
 
 
-    public SensorListAdapter(SensorAccumulatorManager sensorManager)
+    public SensorListAdapter(SensorManager sensorManager)
     {
         this.sensorManager = sensorManager;
 
@@ -89,13 +103,14 @@ public class SensorListAdapter extends RecyclerView.Adapter<SensorListAdapter.Vi
     @Override
     public void onBindViewHolder(@NonNull SensorListAdapter.ViewHolder holder, int position)
     {
-        List<Sensor> sensors = new ArrayList<>(sensorManager.getSensors().values());
+        List<Sensor> sensors = sensorManager.getSensorList(Sensor.TYPE_ALL);
         String initialText = "No events received from" + sensors.get(position).getName();
         holder.setText(initialText);
         holder.setButtonCallback((e) -> {
-            String str = sensorManager.getAccumulator(position).countReadings() +
-                '\n' + sensorManager.getSensor(position).getName();
-            holder.setText(str);
+            if (!holder.registered)
+                holder.register(position);
+            else
+                holder.unregister();
         });
     }
 
@@ -103,6 +118,7 @@ public class SensorListAdapter extends RecyclerView.Adapter<SensorListAdapter.Vi
     public void onViewRecycled(@NonNull ViewHolder holder)
     {
         super.onViewRecycled(holder);
+        holder.unregister();
         holder.setButtonCallback(null);
     }
 
@@ -110,12 +126,13 @@ public class SensorListAdapter extends RecyclerView.Adapter<SensorListAdapter.Vi
     @Override
     public int getItemCount()
     {
-        return sensorManager.getSensors().size();
+        return sensorManager.getSensorList(Sensor.TYPE_ALL).size();
     }
 
     @Override
     public void onViewDetachedFromWindow(@NonNull ViewHolder holder)
     {
         super.onViewDetachedFromWindow(holder);
+        holder.unregister();
     }
 }
