@@ -1,87 +1,41 @@
 package umu.software.activityrecognition.wear.watchfaces;
 
-import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.support.wearable.watchface.CanvasWatchFaceService;
-import android.support.wearable.watchface.WatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.util.Log;
 import android.view.SurfaceHolder;
 
-import com.google.common.collect.Maps;
-
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.function.Consumer;
 
 import umu.software.activityrecognition.R;
-import umu.software.activityrecognition.chatbot.ChatbotResponse;
-import umu.software.activityrecognition.chatbot.SpeechChatbot;
-import umu.software.activityrecognition.config.ChatBotPreferences;
-import umu.software.activityrecognition.services.DialogflowService;
-import umu.software.activityrecognition.services.RecordServiceHelper;
-import umu.software.activityrecognition.services.ServiceConnectionHandler;
-import umu.software.activityrecognition.shared.AndroidUtils;
-import umu.software.activityrecognition.shared.RepeatingBroadcast;
+import umu.software.activityrecognition.application.ActivityRecognition;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
+import umu.software.activityrecognition.shared.util.Exceptions;
+import umu.software.activityrecognition.wear.watchfaces.drawing.impl.PainterChooser;
+import umu.software.activityrecognition.wear.watchfaces.drawing.PainterFactory;
 
 
-public class ChatbotWatchFace extends CanvasWatchFaceService implements Consumer<ChatbotResponse>
+public class ChatbotWatchFace extends CanvasWatchFaceService
 {
-    public static final String ACTION_START_RECORDING           = "StartRecording";
-    public static final String ACTION_STOP_RECORDING            = "StopRecording";
-    public static final String ACTION_CLASSIFY_ACTIVITY_SHORT   = "ClassifyActivityShort";
-    public static final String ACTION_CLASSIFY_ACTIVITY_LONG    = "ClassifyActivityLong";
-    public static final String EVENT_CLASSIFY_ACTIVITY          = "ClassifyActivityShort";
-
-    public static final String SLOT_PARTICIPANT                 = "participant";
-
-
-    private ServiceConnectionHandler<DialogflowService.Binder> mConnection;
-
-    private String mParticipantName;
-    private RepeatingBroadcast mClassifyReceiver;
-
-
-    private void bindChatbotService()
-    {
-        if (mConnection == null)
-        {
-            String apiKey = AndroidUtils.readRawResourceFile(this, R.raw.dialogflow_credentials);
-            if (apiKey == null)
-                return;
-            mConnection = DialogflowService.getConnection(this, apiKey, null, null);
-        }
-        if(!mConnection.isBound() && !mConnection.isBinding())
-            mConnection.bind(DialogflowService.class);
-    }
-
-    private void chatbotOperation(Consumer<SpeechChatbot> operation)
-    {
-        mConnection.applyBound((binder) -> {
-            SpeechChatbot chatbot = binder.getService().getChatBot();
-            if (chatbot != null)
-                operation.accept(chatbot);
-        });
-    }
-
-    private boolean isBusy()
-    {
-        Boolean busy = mConnection.applyBoundFunction((binder) ->{
-            SpeechChatbot chatbot = binder.getService().getChatBot();
-            return chatbot != null && chatbot.isConnected() && chatbot.isBusy();
-        });
-        return (busy != null)? busy : false;
-    }
+    private ActivityRecognition mActivity;
 
 
     @Override
     public void onCreate()
     {
         super.onCreate();
-        bindChatbotService();
-        startRecording();
+        mActivity = ActivityRecognition.getInstance(this);
+        mActivity.startChatbot();
+        mActivity.startRecordService();
+        mActivity.askStartRecurrentQuestions();
+        Log.i("Chatbot", "onCreate()");
     }
 
 
@@ -89,10 +43,11 @@ public class ChatbotWatchFace extends CanvasWatchFaceService implements Consumer
     public void onDestroy()
     {
         super.onDestroy();
-        stopRecording();
-        stopRecurrentQuestions();
-        mConnection.unbind();
+        mActivity.stopRecordService();
+        mActivity.stopRecurrentQuestions();
+        mActivity.shutdownChatbot();
     }
+
 
 
     @Override
@@ -102,102 +57,70 @@ public class ChatbotWatchFace extends CanvasWatchFaceService implements Consumer
     }
 
 
-    @Override
-    public void accept(ChatbotResponse response)
+
+    private static class TapDetector
     {
-        if (response.hasError())
+
+        public static final int SINGLE_TAP = 0;
+        public static final int DOUBLE_TAP = 1;
+
+
+        private final long mMaxDelay;
+        private long mLastTapTime;
+        private Consumer<Integer> mListener;
+        private Timer mTimer;
+
+        TapDetector(long doubleTapMaxDelayMillis)
         {
-            Log.w(getClass().getSimpleName(), String.format("Error in chatbot response %s", response));
-            return;
+            mMaxDelay = doubleTapMaxDelayMillis;
+            mLastTapTime = SystemClock.elapsedRealtime();
+            mListener = (t) -> {};
+            mTimer = new Timer();
         }
-        String action = response.getAction();
-        RecordServiceHelper serviceHelper = RecordServiceHelper.newInstance(this);
-        switch (action)
+
+        public void setListener(Consumer<Integer> tapListener)
         {
-            case ACTION_START_RECORDING:
-                mParticipantName = response.getSlot(SLOT_PARTICIPANT);
-                if (mParticipantName != null)
+            mListener = tapListener;
+        }
+
+        public void onTap()
+        {
+            long currTime = SystemClock.elapsedRealtime();
+            long timeDiff = currTime - mLastTapTime;
+            boolean doubleTap = timeDiff < mMaxDelay;
+
+            mLastTapTime = currTime;
+            if (doubleTap)
+            {
+                Exceptions.runCatch(() -> mTimer.cancel());
+                mListener.accept(DOUBLE_TAP);
+            }
+            else
+            {
+                mTimer = new Timer();
+                mTimer.schedule(new TimerTask()
                 {
-                    startRecording();
-                    startRecurrentQuestions();
-                }
-                break;
-            case ACTION_STOP_RECORDING:
-                stopRecording();
-                stopRecurrentQuestions();
-                break;
-            case ACTION_CLASSIFY_ACTIVITY_LONG:
-            case ACTION_CLASSIFY_ACTIVITY_SHORT:
-                String activity = response.toString();
-                serviceHelper.setSensorsLabel(activity);
-                break;
-            default:
-                break;
+                    @Override
+                    public void run()
+                    {
+                        mListener.accept(SINGLE_TAP);
+                    }
+                }, mMaxDelay);
+            }
         }
     }
 
 
 
-    private void startRecording()
-    {
-        stopRecording();
-        RecordServiceHelper serviceHelper = RecordServiceHelper.newInstance(this);
 
-        serviceHelper.startRecording(null);
-        serviceHelper.startRecurrentSave(
-                null,
-                mParticipantName,
-                null
-        );
-    }
-
-    private void stopRecording()
-    {
-        RecordServiceHelper serviceHelper = RecordServiceHelper.newInstance(this);
-        serviceHelper.saveZipClearFiles(mParticipantName);
-        serviceHelper.stopRecurrentSave();
-        serviceHelper.stopRecording();
-    }
-
-    private void startRecurrentQuestions()
-    {
-        stopRecurrentQuestions();
-        ChatBotPreferences preferences = new ChatBotPreferences(this);
-        long intervalMillis = preferences.recurrentEventMillis();
-        mClassifyReceiver = new RepeatingBroadcast(this);
-        mClassifyReceiver.start(intervalMillis, ((context, intent) -> {
-            if (preferences.sendRecurrentEvent())
-                chatbotOperation((chatbot) -> {
-                    chatbot.sendEvent(preferences.recurrentEventName(), Maps.newHashMap(), this);
-                });
-        }));
-
-
-        Log.i("CHATBOT", "Started recurring classify every "+intervalMillis+" milliseconds");
-    }
-
-    private void stopRecurrentQuestions()
-    {
-        if(mClassifyReceiver == null)
-            return;
-        mClassifyReceiver.stop();
-        mClassifyReceiver = null;
-    }
 
     private class Engine extends CanvasWatchFaceService.Engine
     {
-        private static final long INVALIDATE_MILLIS = 200;
-
-        private Bitmap mOnPicture;
-        private Bitmap mOffPicture;
-
+        private static final long INVALIDATE_MILLIS = 700;
         private final Handler mHandler = AndroidUtils.newHandler();
+        private PainterChooser mPainterChooser;
 
-
-        public Bitmap getChatbotImage()
-        {
-            return (isBusy())? mOnPicture : mOffPicture;
-        }
+        private TapDetector mTapDetector;
 
         private void loopInvalidate()
         {
@@ -209,8 +132,28 @@ public class ChatbotWatchFace extends CanvasWatchFaceService implements Consumer
         public void onCreate(SurfaceHolder holder)
         {
             super.onCreate(holder);
-            mOnPicture = BitmapFactory.decodeResource(getResources(), R.drawable.chatbot_on);
-            mOffPicture = BitmapFactory.decodeResource(getResources(), R.drawable.chatbot_off);
+            mPainterChooser = PainterFactory.newBitmapChooser(
+                    new Rect(),
+                    BitmapFactory.decodeResource(getResources(), R.drawable.chatbot_off),
+                    BitmapFactory.decodeResource(getResources(), R.drawable.chatbot_on)
+                    );
+
+            mTapDetector = new TapDetector(400);
+            mTapDetector.setListener((tapType) -> {
+                switch (tapType)
+                {
+                    case TapDetector.SINGLE_TAP:
+                        mActivity.sendClassifyEvent();
+                        break;
+                    case TapDetector.DOUBLE_TAP:
+                        if (!mActivity.isAskingQuestions())
+                            mActivity.askStartRecurrentQuestions();
+                        else
+                            mActivity.askStopRecurrentQuestions();
+                        break;
+                }
+            });
+
             setWatchFaceStyle(new WatchFaceStyle.Builder(ChatbotWatchFace.this)
                     .setAcceptsTapEvents(true)
                     // other settings
@@ -220,42 +163,31 @@ public class ChatbotWatchFace extends CanvasWatchFaceService implements Consumer
         }
 
 
+
         @Override
         public void onTapCommand(int tapType, int x, int y, long eventTime)
         {
-            switch (tapType) {
-                case WatchFaceService.TAP_TYPE_TAP:
-                    chatbotOperation((chatbot) -> chatbot.startListening(ChatbotWatchFace.this));
-                    break;
-                default:
-                    super.onTapCommand(tapType, x, y, eventTime);
-                    break;
-            }
+            super.onTapCommand(tapType, x, y, eventTime);
+
+            if (tapType == TAP_TYPE_TAP)
+                mTapDetector.onTap();
+
         }
 
-        @Override
-        public void onAmbientModeChanged(boolean inAmbientMode)
-        {
-            super.onAmbientModeChanged(inAmbientMode);
-        }
 
         @Override
         public void onDraw(Canvas canvas, Rect bounds)
         {
             super.onDraw(canvas, bounds);
-            Bitmap image = getChatbotImage();
-            Rect size = new Rect(0, 0, image.getWidth(), image.getHeight());
-            canvas.drawBitmap(image, size, bounds, null);
+            mPainterChooser.setPainter(mActivity.isChatbotBusy()? 1 : 0);
+            mPainterChooser.getDest().set(bounds);
+            mPainterChooser.accept(canvas);
+            //Bitmap image = getChatbotImage();
+            //Rect src = new Rect(0, 0, image.getWidth(), image.getHeight());
+            //Paint paint = getPaint(null);
+            //canvas.drawBitmap(image, src, bounds, paint);
         }
 
-
-        public Paint getPaint(Consumer<Paint> initializer)
-        {
-            Paint p = new Paint();
-            if (initializer != null)
-                initializer.accept(p);
-            return p;
-        }
 
         @Override
         public void onDestroy()

@@ -3,12 +3,8 @@ package umu.software.activityrecognition.data.accumulators;
 import android.content.Context;
 import android.hardware.SensorManager;
 
-import androidx.annotation.NonNull;
-import androidx.lifecycle.LifecycleOwner;
-
 import org.hitlabnz.sensor_fusion_demo.orientationProvider.AccelerometerCompassProvider;
 import org.hitlabnz.sensor_fusion_demo.orientationProvider.CalibratedGyroscopeProvider;
-import org.hitlabnz.sensor_fusion_demo.orientationProvider.GravityCompassProvider;
 import org.hitlabnz.sensor_fusion_demo.orientationProvider.ImprovedOrientationSensor1Provider;
 import org.hitlabnz.sensor_fusion_demo.orientationProvider.ImprovedOrientationSensor2Provider;
 import org.hitlabnz.sensor_fusion_demo.orientationProvider.OrientationProvider;
@@ -17,11 +13,9 @@ import org.hitlabnz.sensor_fusion_demo.representation.Quaternion;
 
 import java.util.Queue;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 
-import umu.software.activityrecognition.application.ApplicationSingleton;
-import umu.software.activityrecognition.shared.AndroidUtils;
-import umu.software.activityrecognition.data.accumulators.consumers.ConsumersFactory;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
+import umu.software.activityrecognition.data.accumulators.consumers.EventConsumersFactory;
 import umu.software.activityrecognition.data.dataframe.DataFrame;
 
 /**
@@ -57,7 +51,7 @@ public class OrientationProviderAccumulator extends Accumulator<OrientationProvi
             row.put("quaternion_z", q.getZ());
             row.put("quaternion_w", q.getW());
         });
-        eventConsumers.add(ConsumersFactory.newTimestamp());
+        eventConsumers.add(EventConsumersFactory.newEpochTimestamp());
     }
 
 
@@ -71,15 +65,17 @@ public class OrientationProviderAccumulator extends Accumulator<OrientationProvi
 
 
     @Override
-    protected void startRecording()
+    public void startRecording()
     {
+        super.startRecording();
         orientationProvider.start();
         startSupplier(() -> orientationProvider);
     }
 
     @Override
-    protected void stopRecording()
+    public void stopRecording()
     {
+        super.stopRecording();
         stopSupplier();
         orientationProvider.stop();
     }

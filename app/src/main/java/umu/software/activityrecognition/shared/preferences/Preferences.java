@@ -6,7 +6,7 @@ import android.content.SharedPreferences;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import umu.software.activityrecognition.shared.AndroidUtils;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
 
 /**
  * Singleton class to access SharedPreferences
@@ -30,10 +30,10 @@ public enum Preferences
     }
 
 
-    public void applyBuilder(Context context, Consumer<PreferencesBuilder> builder)
+    public void applyBuilder(Context context, Consumer<PreferencesEditor> builder)
     {
         SharedPreferences pref = getInstance(context);
-        PreferencesBuilder.newInstance(builder).accept(pref);
+        PreferencesEditor.newInstance(builder).accept(pref);
     }
 
 }

@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import umu.software.activityrecognition.shared.AndroidUtils;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
 import umu.software.activityrecognition.data.dataframe.DataFrame;
 import umu.software.activityrecognition.tflite.TFLiteNamedModels;
 import umu.software.activityrecognition.tflite.model.AccumulatorTFModel;

@@ -1,13 +1,13 @@
 package umu.software.activityrecognition.data.accumulators;
 
 
-import androidx.annotation.NonNull;
-import androidx.lifecycle.DefaultLifecycleObserver;
-import androidx.lifecycle.LifecycleOwner;
+import android.os.SystemClock;
 
 import umu.software.activityrecognition.data.dataframe.DataFrame;
+
 import com.google.common.collect.Queues;
 
+import java.time.Instant;
 import java.util.Queue;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -29,6 +29,7 @@ public abstract class Accumulator<T> implements Consumer<T>, Supplier<DataFrame>
 
     private long minDelayMillis = 0L;
     protected long lastTimestamp = 0L;
+    private boolean recording = false;
 
 
     public Accumulator()
@@ -41,13 +42,13 @@ public abstract class Accumulator<T> implements Consumer<T>, Supplier<DataFrame>
 
 
     /**
-     * Getter for the current system time in milliseconds of an event
+     * Getter for the current system time in milliseconds
      * @param event the event to find the time for
      * @return system time in milliseconds
      */
     protected long getCurrentTimeMillis(T event)
     {
-        return System.currentTimeMillis();
+        return Instant.now().toEpochMilli();
     }
 
 
@@ -68,7 +69,7 @@ public abstract class Accumulator<T> implements Consumer<T>, Supplier<DataFrame>
 
 
     /**
-     * Start a supplier thread for this accumulator. The supplier continuosly supplies the accumulator
+     * Start a supplier thread for this accumulator. The supplier continuously supplies the accumulator
      * with events by using the provided callable.
      * @param supplier the function from which the supplier fetches the events
      */
@@ -140,7 +141,7 @@ public abstract class Accumulator<T> implements Consumer<T>, Supplier<DataFrame>
      */
     protected boolean filter(T event)
     {
-        return (getCurrentTimeMillis(event) - lastTimestamp) >= minDelayMillis;
+        return recording && (getCurrentTimeMillis(event) - lastTimestamp) >= minDelayMillis;
     }
 
 
@@ -215,12 +216,18 @@ public abstract class Accumulator<T> implements Consumer<T>, Supplier<DataFrame>
     /**
      * Start the event recordings. Called by onStart()
      */
-    protected abstract void startRecording();
+    public void startRecording()
+    {
+        recording = true;
+    }
 
 
     /**
      * Stop the event recordings. Called by onStop()
      */
-    protected abstract void stopRecording();
+    public void stopRecording()
+    {
+        recording = false;
+    }
 
 }

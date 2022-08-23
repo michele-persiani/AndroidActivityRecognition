@@ -1,18 +1,24 @@
 package umu.software.activityrecognition.activities;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Pair;
+import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 
 import androidx.annotation.Nullable;
 
+import com.google.android.material.button.MaterialButton;
+
 import java.util.List;
 
-import umu.software.activityrecognition.R;
 import umu.software.activityrecognition.shared.permissions.Permissions;
-import umu.software.activityrecognition.services.RecordServiceHelper;
-import umu.software.activityrecognition.speech.UserPrompt;
+import umu.software.activityrecognition.services.recordings.RecordServiceHelper;
+import umu.software.activityrecognition.speech.ASR;
+import umu.software.activityrecognition.speech.BaseSpeechRecognitionListener;
 
 public class MainActivity extends MenuActivity
 {
@@ -28,17 +34,29 @@ public class MainActivity extends MenuActivity
     protected void buildMenu()
     {
         RecordServiceHelper serviceHelper = RecordServiceHelper.newInstance(this);
+
+
+
+        addMenuEntry("Preferences", (e) -> {
+            Intent intent = new Intent(this, PreferenceActivity.class);
+            startActivity(intent);
+        });
+
+
         addMenuEntry("Start record service", (e) -> {
             serviceHelper.startRecording(null);
             serviceHelper.startRecurrentSave();
         });
+
+
         addMenuEntry("Stop record service", (e) -> {
             serviceHelper.stopRecording();
             serviceHelper.stopRecurrentSave();
         });
 
+
         addMenuEntry("Save files", (e) -> {
-            serviceHelper.saveZipClearFiles(null);
+            serviceHelper.saveZipClearFiles();
         });
 
 
@@ -48,59 +66,53 @@ public class MainActivity extends MenuActivity
         });
 
 
-        addMenuEntry("Prompt user", (e) -> {
-            UserPrompt.INSTANCE.prompt(getString(R.string.request_user_classification), new UserPrompt.Callback()
-            {
-                @Override
-                public void onStartSpeaking() { }
+        addMenuEntry("Set sensors label", (e) -> {
 
+            ASR.FREE_FORM.startListening(new BaseSpeechRecognitionListener() {
                 @Override
-                public void onSpeakingDone() { }
-
-                @Override
-                public void onStartListening() { }
-
-                @Override
-                public void onListeningDone() { }
-
-                @Override
-                public void onResult(List<String> answerCandidates)
+                protected void onRecognizedSpeech(List<Pair<String, Float>> results)
                 {
-                    if (answerCandidates.size() == 0)
-                        return;
-                    String answer = answerCandidates.get(0);
+                    super.onRecognizedSpeech(results);
+                    String answer = results.get(0).first;
                     serviceHelper.setSensorsLabel(answer);
+                    Toast.makeText(MainActivity.this,
+                            String.format("Sensor label set to: (%s)", answer),
+                            Toast.LENGTH_SHORT
+                    ).show();
                 }
 
                 @Override
-                public void onError(int error)
+                public void onError(int i)
                 {
+                    super.onError(i);
                     Toast.makeText(MainActivity.this,
-                            String.format("Error during user prompt: %s", error),
+                            String.format("Error during user prompt: %s", i),
                             Toast.LENGTH_SHORT
                     ).show();
                 }
             });
+
         });
 
 
-
-        addMenuEntry("Launch Chatbot in English", (e) -> {
+        addMenuEntry("Launch Chatbot", (e) -> {
             Intent intent = new Intent(this, ChatbotActivity.class);
-            intent.putExtra(ChatbotActivity.EXTRA_BOT_LANGUAGE, ChatbotActivity.BOT_LANGUAGE_ENGLISH);
-            startActivity(intent);
-        });
-
-
-        addMenuEntry("Launch Chatbot in Swedish", (e) -> {
-            Intent intent = new Intent(this, ChatbotActivity.class);
-            intent.putExtra(ChatbotActivity.EXTRA_BOT_LANGUAGE, ChatbotActivity.BOT_LANGUAGE_SWEDISH);
-            startActivity(intent);
-        });
-        addMenuEntry("Preferences", (e) -> {
-            Intent intent = new Intent(this, PreferenceActivity.class);
             startActivity(intent);
         });
     }
 
+    @Override
+    protected Button makeButton()
+    {
+        MaterialButton button = new MaterialButton(this);
+        button.setMinHeight(150);
+        button.setTextSize(20);
+        button.setAllCaps(true);
+        button.setCornerRadius(40);
+        button.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT)
+        );
+        return button;
+    }
 }

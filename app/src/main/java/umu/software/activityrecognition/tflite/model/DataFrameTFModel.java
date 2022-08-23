@@ -1,6 +1,7 @@
 package umu.software.activityrecognition.tflite.model;
 
 import umu.software.activityrecognition.data.dataframe.DataFrame;
+
 import com.google.common.collect.Maps;
 
 import org.tensorflow.lite.Interpreter;

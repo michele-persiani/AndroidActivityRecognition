@@ -1,23 +1,30 @@
 package umu.software.activityrecognition.chatbot;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
+import androidx.annotation.NonNull;
+
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
-public class ChatbotResponse
+
+/**
+ * Response from a Chatbot
+ */
+public class ChatbotResponse implements Serializable, Parcelable
 {
     private String promptText;
     private String answerText;
     private String intent;
     private String action;
-
-
+    private Exception exception;
     private final Map<String, String> slots = Maps.newHashMap();
 
-
-    private Exception exception;
 
 
     /**
@@ -54,7 +61,7 @@ public class ChatbotResponse
 
     /**
      * Get the intent found in the prompt
-     * @return
+     * @return the intent found in the prompt
      */
     public String getIntent()
     {
@@ -90,14 +97,13 @@ public class ChatbotResponse
         return slots.getOrDefault(slotName, null);
     }
 
-    public boolean hasSlots(String... slotNames)
-    {
-        for (String n : slotNames)
-            if (!slots.containsKey(n))
-                return false;
-        return true;
-    }
 
+    /**
+     * Sets a slot value
+     * @param name slot key
+     * @param value slot value
+     * @return this instance
+     */
     public ChatbotResponse setSlot(String name, String value)
     {
         slots.put(name, value);
@@ -120,8 +126,11 @@ public class ChatbotResponse
         return this;
     }
 
-
-    public boolean allSlotsSpecified()
+    /**
+     * Checks whether all slots in the answer have a value
+     * @return whether all slots in the answer have a value
+     */
+    public boolean allSlotsSet()
     {
         if (slots.size() == 0) return true;
         for (String s : slots.keySet())
@@ -148,17 +157,29 @@ public class ChatbotResponse
     }
 
 
+    /**
+     * Creates a ChatbotResponse containing a RuntimeException
+     * @param message the error message to set in the exception
+     * @return the created ChatbotResponse
+     */
     public static ChatbotResponse forError(String message)
     {
         return new ChatbotResponse().setException(new RuntimeException(message));
     }
 
 
+
+    /**
+     * Creates a ChatbotResponse containing an exception
+     * @param e the exception to set in the message
+     * @return the created ChatbotResponse
+     */
     public static ChatbotResponse forError(Exception e)
     {
         return new ChatbotResponse().setException(e);
     }
 
+    @NonNull
     public String toString()
     {
         StringBuilder stringBuilder = new StringBuilder();
@@ -177,4 +198,62 @@ public class ChatbotResponse
                 getError()
                 );
     }
+
+
+    /* ------ Parcelable interface ------ */
+
+    @Override
+    public int describeContents()
+    {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel parcel, int i)
+    {
+        parcel.writeString(promptText);
+        parcel.writeString(answerText);
+        parcel.writeString(intent);
+        parcel.writeString(action);
+        parcel.writeInt(slots.size());
+        for (Map.Entry<String, String> e : slots.entrySet())
+        {
+            parcel.writeString(e.getKey());
+            parcel.writeString(e.getValue());
+        }
+        int hasException = (exception == null)? 0 : 1;
+        parcel.writeInt(hasException);
+        if (hasException > 0)
+            parcel.writeSerializable(exception);
+    }
+
+    public static final Parcelable.Creator<ChatbotResponse> CREATOR = new Parcelable.Creator<ChatbotResponse>()
+    {
+
+        @Override
+        public ChatbotResponse createFromParcel(Parcel in) {
+            ChatbotResponse response = new ChatbotResponse();
+            response.setPromptText(in.readString())
+                    .setAnswerText(in.readString())
+                    .setIntent(in.readString())
+                    .setAction(in.readString());
+            int numSlots = in.readInt();
+            for (int i = 0; i < numSlots; i++)
+            {
+                String key = in.readString();
+                String value = in.readString();
+                response.setSlot(key, value);
+            }
+
+            int hasException = in.readInt();
+            if (hasException > 0)
+                response.setException((Exception) in.readSerializable());
+            return response;
+        }
+
+        @Override
+        public ChatbotResponse[] newArray(int size) {
+            return new ChatbotResponse[size];
+        }
+    };
 }

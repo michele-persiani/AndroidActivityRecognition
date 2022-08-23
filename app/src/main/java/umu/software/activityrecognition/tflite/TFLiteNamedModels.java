@@ -7,7 +7,7 @@ import java.util.function.BiConsumer;
 
 import umu.software.activityrecognition.data.accumulators.Accumulator;
 import umu.software.activityrecognition.data.accumulators.AccumulatorsFactory;
-import umu.software.activityrecognition.data.accumulators.consumers.ConsumersFactory;
+import umu.software.activityrecognition.data.accumulators.consumers.EventConsumersFactory;
 import umu.software.activityrecognition.tflite.model.AccumulatorTFModel;
 
 
@@ -32,27 +32,27 @@ public enum TFLiteNamedModels
         accumulators.add(
                 factory.newDefaultSensor(Sensor.TYPE_ACCELEROMETER, (accum) -> {
                     accum.setMinDelayMillis(minDelayMillis);
-                    accum.consumers().add(ConsumersFactory.newSelectColumns("f_0", "f_1", "f_2", "delta_timestamp"));
-                    accum.consumers().add(ConsumersFactory.newSubValues("f_", accelMeanValues));
-                    accum.consumers().add(ConsumersFactory.newDivideByValues("f_", accelStdValues));
+                    accum.consumers().add(EventConsumersFactory.newSelectColumns("f_0", "f_1", "f_2", "sensor_delta_timestamp"));
+                    accum.consumers().add(EventConsumersFactory.newSubValues("f_", accelMeanValues));
+                    accum.consumers().add(EventConsumersFactory.newDivideByValues("f_", accelStdValues));
                 })
         );
 
         accumulators.add(
                 factory.newDefaultSensor(Sensor.TYPE_GYROSCOPE, (accum) -> {
                     accum.setMinDelayMillis(minDelayMillis);
-                    accum.consumers().add(ConsumersFactory.newSelectColumns("f_0", "f_1", "f_2", "delta_timestamp"));
-                    accum.consumers().add(ConsumersFactory.newSubValues("f_", gyroMeanValues));
-                    accum.consumers().add(ConsumersFactory.newDivideByValues("f_", gyroStdValues));
+                    accum.consumers().add(EventConsumersFactory.newSelectColumns("f_0", "f_1", "f_2", "sensor_delta_timestamp"));
+                    accum.consumers().add(EventConsumersFactory.newSubValues("f_", gyroMeanValues));
+                    accum.consumers().add(EventConsumersFactory.newDivideByValues("f_", gyroStdValues));
                 })
         );
 
         accumulators.add(
                 factory.newDefaultSensor(Sensor.TYPE_GRAVITY, (accum) -> {
                     accum.setMinDelayMillis(minDelayMillis);
-                    accum.consumers().add(ConsumersFactory.newSelectColumns("f_0", "f_1", "f_2", "delta_timestamp"));
-                    accum.consumers().add(ConsumersFactory.newSubValues("f_", gravMeanValues));
-                    accum.consumers().add(ConsumersFactory.newDivideByValues("f_", gravStdValues));
+                    accum.consumers().add(EventConsumersFactory.newSelectColumns("f_0", "f_1", "f_2", "sensor_delta_timestamp"));
+                    accum.consumers().add(EventConsumersFactory.newSubValues("f_", gravMeanValues));
+                    accum.consumers().add(EventConsumersFactory.newDivideByValues("f_", gravStdValues));
                 })
         );
     });
@@ -61,6 +61,7 @@ public enum TFLiteNamedModels
     private final BiConsumer<Context, List<Accumulator<?>>> builder;
     private final String byteModelFilePath;
 
+    AccumulatorTFModel mModel;
 
     TFLiteNamedModels(String byteModelFilePath, BiConsumer<Context, List<Accumulator<?>>> accumulatorManager)
     {
@@ -68,13 +69,19 @@ public enum TFLiteNamedModels
         this.builder = accumulatorManager;
     }
 
+    public String getModelName()
+    {
+        return byteModelFilePath;
+    }
+
     public AccumulatorTFModel newInstance(Context context)
     {
         TFLiteFactory factory = TFLiteFactory.newInstance(context);
-
-        return factory.newAccumulatorAssetModel(byteModelFilePath, (accumulators -> {
-            builder.accept(context, accumulators);
-        }));
+        return factory.newAccumulatorAssetModel(
+                getModelName(),
+                byteModelFilePath,
+                accumulators -> builder.accept(context, accumulators)
+                );
     }
 
 

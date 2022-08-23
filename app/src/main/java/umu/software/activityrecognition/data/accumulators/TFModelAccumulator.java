@@ -1,7 +1,7 @@
 package umu.software.activityrecognition.data.accumulators;
 
 
-import umu.software.activityrecognition.data.accumulators.consumers.ConsumersFactory;
+import umu.software.activityrecognition.data.accumulators.consumers.EventConsumersFactory;
 import umu.software.activityrecognition.data.dataframe.DataFrame;
 
 import java.nio.FloatBuffer;
@@ -55,19 +55,22 @@ public class TFModelAccumulator extends Accumulator<TFModel>
 
             }
         });
-        eventConsumers.add(ConsumersFactory.newTimestamp());
+        eventConsumers.add(EventConsumersFactory.newSystemClockTimestamp());
+        eventConsumers.add(EventConsumersFactory.newEpochTimestamp());
     }
 
 
     @Override
-    protected void startRecording()
+    public void startRecording()
     {
+        super.startRecording();
         startSupplier(modelSupplier);
     }
 
     @Override
-    protected void stopRecording()
+    public void stopRecording()
     {
+        super.stopRecording();
         stopSupplier();
     }
 

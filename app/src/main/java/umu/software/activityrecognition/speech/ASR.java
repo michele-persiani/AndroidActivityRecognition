@@ -1,6 +1,7 @@
 package umu.software.activityrecognition.speech;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -11,24 +12,46 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 
-import androidx.annotation.Nullable;
-
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
-import umu.software.activityrecognition.application.ApplicationSingleton;
-import umu.software.activityrecognition.shared.AndroidUtils;
-import umu.software.activityrecognition.shared.permissions.Permissions;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
+import umu.software.activityrecognition.shared.util.LogHelper;
 
 
 /**
  * Automatic-Speech-Recognition singleton for the device.
- * Requires RECORD_AUDIO permission. See Permissions
+ * Requires RECORD_AUDIO permission.
  */
 public enum ASR
 {
     FREE_FORM(RecognizerIntent.LANGUAGE_MODEL_FREE_FORM),
     WEB_SEARCH(RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH);
+
+
+    class LanguageDetailsChecker extends BroadcastReceiver
+    {
+        LogHelper mLog = LogHelper.newClassTag("Language Details");
+        @Override
+        public void onReceive(Context context, Intent intent)
+        {
+            if (getResultCode() != Activity.RESULT_OK)
+            {
+                mLog.w("Couldn't retrieve language preferences");
+                return;
+            }
+            Bundle results = getResultExtras(true);
+            if (results.containsKey(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE)) {
+                mLanguagePreference = results.getString(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE);
+                mLog.d("Preferred language (%s)", mLanguagePreference);
+            }
+            if (results.containsKey(RecognizerIntent.EXTRA_SUPPORTED_LANGUAGES)) {
+                mSupportedLanguages = results.getStringArrayList(RecognizerIntent.EXTRA_SUPPORTED_LANGUAGES);
+                mLog.d("Supported languages (%s)", String.join(", ", mSupportedLanguages));
+            }
+        }
+    }
 
     private final String mLanguageModel;
 
@@ -38,6 +61,10 @@ public enum ASR
     private Locale mLocale = Locale.getDefault();
     private Vibrator mVibrator;
     private boolean mListening = false;
+    private int mMaxResults = 1;
+
+    private String mLanguagePreference = null;
+    private List<String> mSupportedLanguages = null;
 
     ASR(String languageModel)
     {
@@ -51,16 +78,36 @@ public enum ASR
             return;
         mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(context);
         mVibrator = AndroidUtils.getVibrator(context);
+        mListening = false;
+        getSupportedLanguages(context);
     }
+
+
+    public void getSupportedLanguages(Context context)
+    {
+        Intent detailsIntent =  new Intent(RecognizerIntent.ACTION_GET_LANGUAGE_DETAILS);
+        context.sendOrderedBroadcast(
+                detailsIntent,
+                null,
+                new LanguageDetailsChecker(),
+                null,
+                Activity.RESULT_OK,
+                null,
+                null
+        );
+    }
+
 
     public void destroy()
     {
         if (!isInitialized())
             return;
-        mSpeechRecognizer.destroy();
+        stopListening();
         mSpeechRecognizer.setRecognitionListener(null);
+        mSpeechRecognizer.destroy();
         mSpeechRecognizer = null;
         mVibrator = null;
+        mListening = false;
     }
 
     public boolean isInitialized()
@@ -69,55 +116,80 @@ public enum ASR
     }
 
 
-    public void askPermissions(Activity activity)
-    {
-        Permissions.RECORD_AUDIO.askPermission(activity);
-    }
-
-
-    public ASR setLanguage(Locale locale)
+    /**
+     * Sets the speech language. Input speech is expected in this language
+     * @param locale the language to use
+     */
+    public void setLanguage(Locale locale)
     {
         mLocale = locale;
-        return this;
     }
 
+
+    /**
+     * Gets the currently recognized language. Can be changed through setLanguage()
+     * @return the currently recognized language
+     */
+    public Locale getLanguage()
+    {
+        return mLocale;
+    }
+
+
+    /**
+     * Sets the maximum number of results for a speech recognition
+     * @param maxResults maximum number of results
+     */
+    public void setMaxRecognitionResults(int maxResults)
+    {
+        mMaxResults = Math.max(1, Math.min(maxResults, 10));
+    }
+
+
+    /**
+     * Returns the maximum number of results for a speech recognition
+     * @return the maximum number of results for a speech recognition
+     */
+    public int getMaxRecognitionResults()
+    {
+        return mMaxResults;
+    }
+
+    /**
+     * Returns whether the speech recognizer is listening
+     * @return whether the speech recognizer is listening
+     */
     public boolean isListening()
     {
         return mListening;
     }
 
     /***
-     * Start listening from the device, eventually translating the recorded speech with the given Translator.
-     * For efficiency only results in the call onResults() are translated
-     * NB. Only one process at a time can be executing startListening(). When a thread finishes
-     * listening it is only by calling stopListening() that the listening semaphore is released
-     * @param translator optional translator to use
+     * Start listening a user utterance from the device's microphone
+     * NB. Only one process at a time can be executing listening at any given time. Calling startListening()
+     * while the speech recognizer is already running will trigger onError() in the callback
      * @param listener callback
      */
-    public void startListening(Translator translator, RecognitionListener listener)
+    public void startListening(RecognitionListener listener)
     {
-        if (mSpeechRecognizer == null)
-        {
-            listener.onError(SpeechRecognizer.ERROR_CLIENT);
-            return;
-        }
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, mLanguageModel);
-        Locale language = (translator == null)? mLocale : translator.getSourceLanguage();
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, language.toLanguageTag());
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, mLocale.toLanguageTag());
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, new String[]{});
-        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, mMaxResults);
+        intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
         //intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 3000);
         //intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 5000);
-        intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
-
 
         mHandler.post(() -> {
-            if (mListening)
+            if (mListening || ! isInitialized())
+            {
+                listener.onError(SpeechRecognizer.ERROR_CLIENT);
                 return;
+            }
             mListening = true;
-            RecognitionListener tlistener = getTranslatorListener(listener, translator);
-            mSpeechRecognizer.setRecognitionListener(tlistener);
+            RecognitionListener translatorListener = wrapListener(listener);
+            mSpeechRecognizer.setRecognitionListener(translatorListener);
             mSpeechRecognizer.startListening(intent);
             mVibrator.vibrate(
                     VibrationEffect.createOneShot(
@@ -125,17 +197,6 @@ public enum ASR
                             VibrationEffect.DEFAULT_AMPLITUDE)
             );
         });
-    }
-
-    /***
-     * Start listening from the device.
-     * NB. Only one process at a time can be executing startListening(). When a thread finishes
-     * listening it is only by calling stopListening() that the listening semaphore is released
-     * @param listener callback
-     */
-    public void startListening(RecognitionListener listener)
-    {
-       startListening(null, listener);
     }
 
 
@@ -180,30 +241,14 @@ public enum ASR
     }
 
     /**
-     * Wraps the callback with a translating callback. Translates only results in onResults()
-     * @param wrapped the wrapped listener that will be called with the translated recognized speech
-     * @param translator optional translator operating the translation. If null no translation will be performed
+     * Wraps the callback with a state-tracking logic ie. to provide isListening()
+     * @param wrapped the wrapped listener that will be called along the updates to the ASR state
      * @return the translating listener
      */
-    private RecognitionListener getTranslatorListener(RecognitionListener wrapped, @Nullable Translator translator)
+    private RecognitionListener wrapListener(RecognitionListener wrapped)
     {
         return new RecognitionListener()
         {
-            private ArrayList<String> translateResults(Bundle bundle)
-            {
-                ArrayList<String> results = ASR.getRecognizedSpeech(bundle);
-                if(translator != null)
-                {
-                    String sentence;
-                    for (int i = 0; i < results.size(); i++) {
-                        sentence = results.get(i);
-                        sentence = translator.translate(sentence);
-                        results.set(i, sentence);
-                    }
-                }
-                bundle.putStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION, results);
-                return results;
-            }
             @Override
             public void onReadyForSpeech(Bundle bundle)
             {
@@ -251,7 +296,6 @@ public enum ASR
                 if(!mListening)
                     return;
                 mListening = false;
-                translateResults(bundle);
                 wrapped.onResults(bundle);
             }
 

@@ -2,34 +2,32 @@ package umu.software.activityrecognition.shared.preferences;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 
-import androidx.annotation.NonNull;
-import androidx.startup.AppInitializer;
-import androidx.startup.Initializer;
+import androidx.preference.PreferenceManager;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
-import java.util.List;
-import java.util.function.Consumer;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
-
-import umu.software.activityrecognition.shared.preferences.Preferences;
-import umu.software.activityrecognition.shared.preferences.PreferencesBuilder;
 
 /**
  * A module providing access to a set of preferences. Subclasses can define named methods to access
- * the preferences being specifically accessed
+ * the preferences being specifically accessed.
+ * NB. when a module is finalized all preference observers are detached from its preferences
  */
 public abstract class PreferencesModule
 {
     protected final Context mContext;
-    private final SharedPreferences mPreferences;
+    private final SharedPreferences mSharedPreferences;
 
+    private final Map<String, Preference<?>> mPreferences = Maps.newHashMap();
 
     public PreferencesModule(Context context)
     {
         mContext = context.getApplicationContext();
-        mPreferences = Preferences.DEFAULT.getInstance(context);
+        mSharedPreferences = Preferences.DEFAULT.getInstance(mContext);
         initialize();
     }
 
@@ -39,92 +37,119 @@ public abstract class PreferencesModule
         return mContext.getString(resId);
     }
 
-    /**
-     * Get a preference and try to cast it to the given type
-     * @param key preference key
-     * @param defaultValue default value used if the preference if not found
-     * @param castFunction the function using to cast the preference
-     * @param <T> the type of the preference
-     * @return
-     */
-    private <T> T getPreference(String key, T defaultValue, Function<String, T> castFunction)
+    protected Resources getResources()
     {
-        Object value = mPreferences.getAll().get(key);
-        if (value == null)
-            return defaultValue;
-        return castFunction.apply(value.toString());
-    }
-
-
-    /* Helper methods */
-
-    protected String getString(String key, String defaultValue)
-    {
-        return getPreference(key, defaultValue, (s) -> s);
-    }
-
-    protected Boolean getBoolean(String key, boolean defaultValue)
-    {
-        return getPreference(key, defaultValue, Boolean::valueOf);
-    }
-
-    protected Float getFloat(String key, float defaultValue)
-    {
-        return getPreference(key, defaultValue, Float::valueOf);
-    }
-
-    protected Integer getInt(String key, int defaultValue)
-    {
-        return getPreference(key, defaultValue, Integer::valueOf);
-    }
-
-    protected Long getLong(String key, long defaultValue)
-    {
-        return getPreference(key, defaultValue, Long::valueOf);
-    }
-
-    protected String getString(int keyResId, String defaultValue)
-    {
-        return getPreference(getStringFromId(keyResId), defaultValue, (s) -> s);
-    }
-
-    protected Boolean getBoolean(int keyResId, boolean defaultValue)
-    {
-        return getPreference(getStringFromId(keyResId), defaultValue, Boolean::valueOf);
-    }
-
-    protected Float getFloat(int keyResId, float defaultValue)
-    {
-        return getPreference(getStringFromId(keyResId), defaultValue, Float::valueOf);
-    }
-
-    protected Integer getInt(int keyResId, int defaultValue)
-    {
-        return getPreference(getStringFromId(keyResId), defaultValue, Integer::valueOf);
-    }
-
-    protected Long getLong(int keyResId, long defaultValue)
-    {
-        return getPreference(getStringFromId(keyResId), defaultValue, Long::valueOf);
-    }
-
-
-    /**
-     * Initialize the module
-     */
-    public void initialize()
-    {
-        PreferencesBuilder
-                .newInstance((preferencesBuilder -> initialize(mContext, preferencesBuilder)))
-                .accept(mPreferences);
+        return mContext.getResources();
     }
 
     /**
-     * Initialize the properties of the module
-     * @param context the calling context
-     * @param builder helper builder
+     * Gets a flyweight preference that accesses a specific preference of SharedPreferences
+     * @param key the preference's key
+     * @param factoryMethod function that uses PreferenceFactory to create a Preference<T></T>
+     * @param <T> datatype of the preference
+     * @return a cached Preference if present (with the given key) or a newly created Preference that is added to the cache
      */
-    protected abstract void initialize(Context context, PreferencesBuilder builder);
+    protected <T> Preference<T> getPreference(String key, Function<PreferenceFactory, Preference<T>> factoryMethod)
+    {
+        if (!mPreferences.containsKey(key))
+        {
+            PreferenceFactory factory = PreferenceFactory.newInstance(mSharedPreferences);
+            Preference<T> pref = factoryMethod.apply(factory);
+            mPreferences.put(key, pref);
+        }
+        return (Preference<T>) mPreferences.get(key);
+    }
+
+
+    /* Helper methods to get Preferences for standard datatypes */
+
+    protected Preference<String> getString(String key)
+    {
+        return getPreference(key, f -> f.stringPreference(key));
+    }
+
+    protected Preference<String> getString(int keyResId)
+    {
+        String key = getStringFromId(keyResId);
+        return getString(key);
+    }
+
+    protected Preference<Boolean> getBoolean(String key)
+    {
+        return getPreference(key, f -> f.booleanPreference(key));
+    }
+
+    protected Preference<Boolean> getBoolean(int keyResId)
+    {
+        String key = getStringFromId(keyResId);
+        return getBoolean(key);
+    }
+
+    protected Preference<Float> getFloat(String key)
+    {
+        return getPreference(key, f -> f.floatPreference(key));
+    }
+
+    protected Preference<Float> getFloat(int keyResId)
+    {
+        String key = getStringFromId(keyResId);
+        return getFloat(key);
+    }
+
+    protected Preference<Integer> getInt(String key)
+    {
+        return getPreference(key, f -> f.integerPreference(key));
+    }
+
+    protected Preference<Integer> getInt(int keyResId)
+    {
+        String key = getStringFromId(keyResId);
+        return getInt(key);
+    }
+
+    protected Preference<Long> getLong(String key)
+    {
+        return getPreference(key, f -> f.longPreference(key));
+    }
+
+    protected Preference<Long> getLong(int keyResId)
+    {
+        String key = getStringFromId(keyResId);
+        return getLong(key);
+    }
+
+    protected Preference<Set<String>> getStringSet(String key)
+    {
+        return getPreference(key, f -> f.stringSetPreference(key));
+    }
+
+    protected Preference<Set<String>> getStringSet(int keyResId)
+    {
+        String key = getStringFromId(keyResId);
+        return getStringSet(key);
+    }
+
+    /**
+     * Clear all listeners of all Preference of this module
+     */
+    public void clearListeners()
+    {
+        for (Preference<?> p : mPreferences.values())
+            p.clearListeners();
+    }
+
+    @Override
+    protected void finalize() throws Throwable
+    {
+        super.finalize();
+        clearListeners();
+        mPreferences.clear();
+    }
+
+    /**
+     * Initialize the properties of the module. Use with Preferences' init() metohds
+     */
+    protected abstract void initialize();
 
 
 }

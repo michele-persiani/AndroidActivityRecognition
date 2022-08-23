@@ -2,7 +2,6 @@ package umu.software.activityrecognition.services;
 
 import android.app.Service;
 import android.content.Intent;
-import android.os.Binder;
 import android.os.IBinder;
 
 import androidx.annotation.Nullable;
@@ -17,11 +16,18 @@ import java.net.SocketTimeoutException;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import umu.software.activityrecognition.shared.Exceptions;
+import umu.software.activityrecognition.shared.util.Exceptions;
+
+
 
 /**
  * Bound service to utilize UDP sockets to send and receive packets.
  * Supports only bind()
+ *
+ *
+ * !!! #TODO no testing has been performed !!!
+ *
+ *
  */
 public class UDPService extends Service
 {

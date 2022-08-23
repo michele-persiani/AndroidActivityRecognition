@@ -7,11 +7,8 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Handler;
 
-import androidx.annotation.NonNull;
-import androidx.lifecycle.LifecycleOwner;
-
-import umu.software.activityrecognition.shared.AndroidUtils;
-import umu.software.activityrecognition.data.accumulators.consumers.ConsumersFactory;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
+import umu.software.activityrecognition.data.accumulators.consumers.EventConsumersFactory;
 import umu.software.activityrecognition.data.dataframe.DataFrame;
 
 import java.util.Queue;
@@ -60,10 +57,7 @@ public class SensorAccumulator extends Accumulator<SensorEvent> implements Senso
         return TimeUnit.MILLISECONDS.convert(event.timestamp, TimeUnit.NANOSECONDS);
     }
 
-    /**
-     * Returns the sensor being recorded
-     * @return the sensor being recorded
-     */
+
     public Sensor getSensor()
     {
         return mSensor;
@@ -81,12 +75,14 @@ public class SensorAccumulator extends Accumulator<SensorEvent> implements Senso
                 r.put(colname, e.values[i]);
             }
         });
-        eventConsumers.add(ConsumersFactory.newSensorTimestamp());
+        eventConsumers.add(EventConsumersFactory.newSensorTimestamp());
+        eventConsumers.add(EventConsumersFactory.newEpochTimestamp());
     }
 
     @Override
-    protected void startRecording()
+    public void startRecording()
     {
+        super.startRecording();
         mHandler = AndroidUtils.newHandler();
         mSensorManager.registerListener(
                 this, mSensor,
@@ -96,8 +92,9 @@ public class SensorAccumulator extends Accumulator<SensorEvent> implements Senso
     }
 
     @Override
-    protected void stopRecording()
+    public void stopRecording()
     {
+        super.stopRecording();
         mSensorManager.unregisterListener(this);
         mHandler.getLooper().quitSafely();
     }

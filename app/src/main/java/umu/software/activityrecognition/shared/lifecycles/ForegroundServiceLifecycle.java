@@ -14,7 +14,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-import umu.software.activityrecognition.shared.AndroidUtils;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
 
 /**
  * Lifecycle observer that starts a service as foreground
@@ -41,7 +41,7 @@ public class ForegroundServiceLifecycle implements DefaultLifecycleObserver
     {
         this(
                 service,
-                new Random().nextInt(10000) + 10000,
+                new Random().nextInt(100000) + 100000,
                 String.format("NotificationChannel-%s", UUID.randomUUID()),
                 notificationBuilder
         );
@@ -58,7 +58,7 @@ public class ForegroundServiceLifecycle implements DefaultLifecycleObserver
     }
 
 
-    private void initializeForegroundService()
+    public void setupForegroundService()
     {
         NotificationChannel channel = new NotificationChannel(
                 mChannelName,
@@ -70,17 +70,18 @@ public class ForegroundServiceLifecycle implements DefaultLifecycleObserver
                 .getNotificationManager(mService)
                 .createNotificationChannel(channel);
 
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(mService, mChannelName);
         mNotificationBuilder.accept(builder);
         Notification n = builder.build();
-
         mService.startForeground(mNotificationId, n);
+
     }
 
     @Override
     public void onCreate(@NonNull LifecycleOwner owner)
     {
-        initializeForegroundService();
+        setupForegroundService();
     }
 
     @Override

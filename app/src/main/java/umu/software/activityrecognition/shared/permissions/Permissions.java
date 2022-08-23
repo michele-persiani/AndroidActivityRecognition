@@ -24,7 +24,7 @@ public enum Permissions
     ACCESS_WIFI_STATE(Manifest.permission.ACCESS_WIFI_STATE),
     CHANGE_WIFI_STATE(Manifest.permission.CHANGE_WIFI_STATE);
 
-    public static int REQUEST_CODE = 180000;
+    public static int REQUEST_CODE = 180001;
     private final String permissionId;
 
 

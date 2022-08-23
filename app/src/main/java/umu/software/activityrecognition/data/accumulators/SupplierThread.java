@@ -5,7 +5,7 @@ import android.util.Log;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class SupplierThread<T> implements Supplier<T>
+class SupplierThread<T> implements Supplier<T>
 {
     private final Consumer<T> accumulator;
     private final Supplier<T> supplier;
@@ -47,7 +47,7 @@ public class SupplierThread<T> implements Supplier<T>
     }
 
 
-    public synchronized boolean running()
+    public synchronized boolean isRunning()
     {
         return running;
     }
@@ -55,7 +55,7 @@ public class SupplierThread<T> implements Supplier<T>
 
     private void run()
     {
-        while(running())
+        while(isRunning())
         {
             try {
                 Thread.sleep(delayMillis);

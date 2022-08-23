@@ -27,7 +27,7 @@ public abstract class ListViewActivity extends AppCompatActivity
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType)
         {
             View itemView = ListViewActivity.this.createListEntryView();
-            return new ViewHolder(itemView);
+            return ListViewActivity.this.createViewHolder(itemView);
         }
 
         @Override
@@ -37,11 +37,25 @@ public abstract class ListViewActivity extends AppCompatActivity
         }
 
         @Override
+        public void onViewRecycled(@NonNull ViewHolder holder)
+        {
+            super.onViewRecycled(holder);
+            ListViewActivity.this.onViewRecycled(holder);
+        }
+
+        @Override
+        public void onDetachedFromRecyclerView(@NonNull RecyclerView recyclerView)
+        {
+            super.onDetachedFromRecyclerView(recyclerView);
+        }
+
+        @Override
         public int getItemCount()
         {
             return ListViewActivity.this.getItemCount();
         }
     }
+
 
     protected static class ViewHolder extends RecyclerView.ViewHolder
     {
@@ -68,6 +82,15 @@ public abstract class ListViewActivity extends AppCompatActivity
         recyclerView.setAdapter(new ListViewActivity.Adapter());
     }
 
+    /**
+     * Creates a ViewHolder for the given view
+     * @param view
+     * @return
+     */
+    protected ViewHolder createViewHolder(View view)
+    {
+        return new ViewHolder(view);
+    }
 
     /**
      * Creates a view for an entry. All entries get their view created throuh this method.
@@ -83,10 +106,19 @@ public abstract class ListViewActivity extends AppCompatActivity
 
     /**
      * Binds the ViewHolder to the element of the given position.
-     * @param holder the ViewHolder to bind. getView() returns the element's view
+     * @param holder the ViewHolder to bind. Previously created through createViewHolder().
+     *               getView() returns the element's view
      * @param position the position of the element to bind
      */
     protected abstract void bindElementView(@NonNull ViewHolder holder, int position);
 
 
+    /**
+     * Called when a ViewHolder gets recycled
+     * @param holder the holder being recycled
+     */
+    protected void onViewRecycled(ViewHolder holder)
+    {
+
+    }
 }

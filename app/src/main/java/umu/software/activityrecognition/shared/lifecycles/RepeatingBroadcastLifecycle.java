@@ -8,10 +8,14 @@ import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
-import umu.software.activityrecognition.shared.RepeatingBroadcast;
+import umu.software.activityrecognition.shared.util.RepeatingBroadcast;
 
 
+/**
+ * Lifecycle handling a RepeatingBroadcast
+ */
 public class RepeatingBroadcastLifecycle implements DefaultLifecycleObserver
 {
     private final long mIntervalMillis;
@@ -20,6 +24,7 @@ public class RepeatingBroadcastLifecycle implements DefaultLifecycleObserver
 
     private RepeatingBroadcast mBroadcast;
 
+
     public RepeatingBroadcastLifecycle(@NonNull Context context, long intervalMillis, BiConsumer<Context, Intent> intentConsumer)
     {
         mContext = context.getApplicationContext();
@@ -27,6 +32,14 @@ public class RepeatingBroadcastLifecycle implements DefaultLifecycleObserver
         mIntentConsumer = intentConsumer;
     }
 
+    /**
+     * Used to configure the broadcast receiver
+     * @param broadcastBuilder builder method
+     */
+    public void configure(Consumer<RepeatingBroadcast> broadcastBuilder)
+    {
+        broadcastBuilder.accept(mBroadcast);
+    }
 
     @Override
     public void onStart(@NonNull LifecycleOwner owner)
@@ -39,7 +52,7 @@ public class RepeatingBroadcastLifecycle implements DefaultLifecycleObserver
     @Override
     public void onStop(@NonNull LifecycleOwner owner)
     {
-        DefaultLifecycleObserver.super.onStop(owner);
+        DefaultLifecycleObserver.super.onDestroy(owner);
         mBroadcast.stop();
     }
 

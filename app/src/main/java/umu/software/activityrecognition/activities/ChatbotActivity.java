@@ -1,43 +1,32 @@
 package umu.software.activityrecognition.activities;
 
-import android.content.Intent;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.widget.ImageView;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.Lifecycle;
+import androidx.wear.ambient.AmbientModeSupport;
 
 import umu.software.activityrecognition.R;
-import umu.software.activityrecognition.chatbot.ActivityRecognitionConsumerImpl;
-import umu.software.activityrecognition.shared.AndroidUtils;
+import umu.software.activityrecognition.application.ActivityRecognition;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
 import umu.software.activityrecognition.shared.lifecycles.WakeLockLifecycle;
+import umu.software.activityrecognition.speech.ASR;
 
 
 public class ChatbotActivity extends AppCompatActivity
 {
-    public static final String EXTRA_BOT_LANGUAGE               = "BotLanguage";
-    public static final String BOT_LANGUAGE_ENGLISH             = "en-US";
-    public static final String BOT_LANGUAGE_SWEDISH             = "sv-SE";
-
-
-
-
-
-
-
-    private ActivityRecognitionConsumerImpl mChatBot;
-
-    private boolean mStarted = false;
+    private ActivityRecognition mActivityRecognition;
 
     private final Handler mHandler = AndroidUtils.newMainLooperHandler();
 
     private boolean mBusy = false;
     private ImageView mImageView;
-
     private WifiManager.WifiLock mWifiLock;
+    private AmbientModeSupport.AmbientController mAmbientController;
 
 
     @Override
@@ -46,38 +35,46 @@ public class ChatbotActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chatbot);
 
-        Intent intent = getIntent();
-        Bundle extras = (intent != null && intent.getExtras() != null)? intent.getExtras() : new Bundle();
-        if (savedInstanceState != null)
-            extras.putAll(savedInstanceState);
-
-        initializeChatbot(extras);
         initializeGUI();
 
         getLifecycle().addObserver(WakeLockLifecycle.newPartialWakeLock(this));
 
         mWifiLock = AndroidUtils.forceWifiOn(this);
-        //setAmbientEnabled();
 
+        //setAmbientEnabled();
+        mActivityRecognition = ActivityRecognition.getInstance(this);
+        if (getResources().getBoolean(R.bool.iswearable))
+            setupWear();
     }
+
+
+    private void setupWear()
+    {
+        getSupportActionBar().hide();
+        mAmbientController = AmbientModeSupport.attach(this);
+    }
+
 
     @Override
     protected void onStart()
     {
         super.onStart();
-        mStarted = true;
-        mChatBot.bindChatbotService();
         setChatbotImage();
-        mChatBot.startRecording();
+        mActivityRecognition.startChatbot();                                                   // Bind and start the chatbot (keep binding on)
+        mActivityRecognition.startRecordService();                                                  // Start recordings and auto-save
+        mActivityRecognition.askStartRecurrentQuestions();
+        //mActivityRecognition.sendWelcomeEvent()
+        ASR.FREE_FORM.getSupportedLanguages(this);
     }
 
     @Override
     protected void onStop()
     {
         super.onStop();
-        mStarted = false;
-        mChatBot.stopRecording();
-        mChatBot.unbindChatbotService();
+        //mActivityRecognition.sendGoodbyeEvent()
+        //mActivityRecognition.stopRecordService();
+        mActivityRecognition.askStopRecurrentQuestions();                                              // Stop chatbot's recurrent questions if ever started
+        mActivityRecognition.shutdownChatbot();                                                     // Unbind chatbot and clear sensor label
     }
 
     @Override
@@ -88,20 +85,10 @@ public class ChatbotActivity extends AppCompatActivity
     }
 
 
-    private void initializeChatbot(@NonNull Bundle extras)
-    {
-        mChatBot = new ActivityRecognitionConsumerImpl(this);
-    }
-
     private void initializeGUI()
     {
         mImageView = findViewById(R.id.imageView);
-        mImageView.setOnClickListener(view -> {
-            if (mChatBot.isRepeatingClassify())
-                mChatBot.sendClassifyEvent();
-            else
-                mChatBot.startListening();
-        });
+        mImageView.setOnClickListener(view -> mActivityRecognition.startListening());
         mImageView.setImageResource(R.drawable.chatbot_off);
     }
 
@@ -109,19 +96,15 @@ public class ChatbotActivity extends AppCompatActivity
 
     private void setChatbotImage()
     {
-        boolean busy = mChatBot.isBusy();
-
-        if (mStarted)
-            mHandler.postDelayed(this::setChatbotImage, 500);
+        boolean busy = mActivityRecognition.isChatbotBusy();
+        if (getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.CREATED))
+            mHandler.postDelayed(this::setChatbotImage, 300);
 
         if (busy == mBusy)
             return;
 
-        if (busy)
-            mImageView.setImageResource(R.drawable.chatbot_on);
-        else
-            mImageView.setImageResource(R.drawable.chatbot_off);
         mBusy = busy;
+        mImageView.setImageResource((busy) ? R.drawable.chatbot_on : R.drawable.chatbot_off);
 
     }
 

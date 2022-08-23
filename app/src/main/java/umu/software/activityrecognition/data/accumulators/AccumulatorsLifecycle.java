@@ -4,6 +4,8 @@ package umu.software.activityrecognition.data.accumulators;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LifecycleRegistry;
@@ -28,7 +30,7 @@ import umu.software.activityrecognition.data.dataframe.DataFrame;
 public class AccumulatorsLifecycle implements LifecycleOwner, Map<Object, Accumulator<?>>
 {
     Map<Object, Accumulator<?>> accumulators = Maps.newHashMap();
-    Map<Object, LifecycleObserver> observers = Maps.newHashMap();
+    Map<Object, LifecycleEventObserver> observers = Maps.newHashMap();
 
     private final LifecycleRegistry lifecycle = new LifecycleRegistry(this);
 
@@ -113,24 +115,17 @@ public class AccumulatorsLifecycle implements LifecycleOwner, Map<Object, Accumu
         if (containsKey(key))
             previous = remove(key);
 
-        LifecycleObserver obs = new DefaultLifecycleObserver()
-        {
-            @Override
-            public void onStart(@NonNull LifecycleOwner owner)
+        LifecycleEventObserver obs = (source, event) -> {
+            switch (event)
             {
-                accumulator.startRecording();
-            }
-
-            @Override
-            public void onStop(@NonNull LifecycleOwner owner)
-            {
-                accumulator.stopRecording();
-            }
-
-            @Override
-            public void onDestroy(@NonNull LifecycleOwner owner)
-            {
-                accumulator.stopSupplier();
+                case ON_START:
+                    accumulator.startRecording();
+                    break;
+                case ON_STOP:
+                case ON_DESTROY:
+                    accumulator.stopSupplier();
+                    accumulator.stopRecording();
+                    break;
             }
         };
 
@@ -146,6 +141,7 @@ public class AccumulatorsLifecycle implements LifecycleOwner, Map<Object, Accumu
      * @param key key to identify the accumulator
      * @return the accumulator with the associated key or null
      */
+    @Nullable
     public Accumulator<?> get(Object key)
     {
         if (!containsKey(key))
@@ -156,14 +152,20 @@ public class AccumulatorsLifecycle implements LifecycleOwner, Map<Object, Accumu
     /**
      * Removes the accumulator from those being managed
      * @param key key to identify the accumulator
+     * @return the accumulator being removed or null
      */
+    @Nullable
     public Accumulator<?> remove(Object key)
     {
         if (!containsKey(key))
             return null;
-
         lifecycle.removeObserver(Objects.requireNonNull(observers.get(key)));
-        observers.remove(key);
+        LifecycleEventObserver obs = observers.remove(key);
+        Objects.requireNonNull(obs)
+                .onStateChanged(
+                        this,
+                        Objects.requireNonNull(Lifecycle.Event.downTo(Lifecycle.State.DESTROYED))
+                );
         return accumulators.remove(key);
     }
 
@@ -173,6 +175,7 @@ public class AccumulatorsLifecycle implements LifecycleOwner, Map<Object, Accumu
      */
     public void clear()
     {
+        clearDataFrames();
         for (Object key : Lists.newArrayList(accumulators.keySet()))
             remove(key);
     }

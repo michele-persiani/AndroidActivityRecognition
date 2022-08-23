@@ -7,7 +7,6 @@ import android.os.Bundle;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
@@ -23,21 +22,53 @@ import java.util.Map;
 import java.util.Set;
 
 import umu.software.activityrecognition.R;
-import umu.software.activityrecognition.shared.AndroidUtils;
-
-
+import umu.software.activityrecognition.preferences.RecordServicePreferences;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
+import umu.software.activityrecognition.tflite.TFLiteNamedModels;
 
 
 public class PreferenceActivity extends AppCompatActivity
 {
 
-    public static String getSensorKey(Sensor sensor)
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState)
     {
-        return String.format("RecordSensor_%s", sensor.getName().replace(" ", "_"));
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_settings);
+        if (getResources().getBoolean(R.bool.iswearable))
+            getSupportActionBar().hide();
     }
 
+    /**
+     * Fragment to select which models to record
+     */
+    public static class ModelRecordingsFragment extends PreferenceFragmentCompat
+    {
+
+        @Override
+        public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String rootKey)
+        {
+            Context context = getActivity();
+            PreferenceScreen screen = getPreferenceManager().createPreferenceScreen(context);
 
 
+            PreferenceCategory category = new PreferenceCategory(context);
+            screen.addPreference(category);
+            category.setTitle("Named models");
+            for (TFLiteNamedModels model : TFLiteNamedModels.values())
+            {
+                SwitchPreferenceCompat sensorPref = new SwitchPreferenceCompat(context);
+                sensorPref.setKey(RecordServicePreferences.getModelKey(model.getModelName()));
+                sensorPref.setTitle(model.getModelName());
+                category.addPreference(sensorPref);
+            }
+            setPreferenceScreen(screen);
+        }
+    }
+
+    /**
+     * Fragment to select which sensors to record
+     */
     public static class SensorRecordingsFragment extends PreferenceFragmentCompat
     {
 
@@ -62,7 +93,7 @@ public class PreferenceActivity extends AppCompatActivity
                 for (Sensor s : sensorsByCategory.get(type))
                 {
                     SwitchPreferenceCompat sensorPref = new SwitchPreferenceCompat(context);
-                    sensorPref.setKey(getSensorKey(s));
+                    sensorPref.setKey(RecordServicePreferences.getSensorKey(s));
                     sensorPref.setTitle(getTypeString(s));
                     sensorPref.setSummary(s.getName().toUpperCase());
                     category.addPreference(sensorPref);
@@ -126,7 +157,6 @@ public class PreferenceActivity extends AppCompatActivity
     }
 
 
-
     public static class MainPreferencesFragment extends PreferenceFragmentCompat
     {
         @Override
@@ -149,13 +179,16 @@ public class PreferenceActivity extends AppCompatActivity
                                 .commit();
                         return true;
                     }));
-        }
-    }
 
-    @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState)
-    {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_settings);
+            findPreference(getString(R.string.recorded_models))
+                    .setOnPreferenceClickListener((preference -> {
+                        requireActivity().getSupportFragmentManager()
+                                .beginTransaction()
+                                .replace(R.id.fragment_settings, new ModelRecordingsFragment())
+                                .addToBackStack("models")
+                                .commit();
+                        return true;
+                    }));
+        }
     }
 }

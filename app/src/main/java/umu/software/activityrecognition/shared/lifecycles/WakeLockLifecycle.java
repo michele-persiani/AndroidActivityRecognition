@@ -8,9 +8,12 @@ import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 
-import umu.software.activityrecognition.application.ApplicationSingleton;
-import umu.software.activityrecognition.shared.AndroidUtils;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
 
+
+/**
+ * Wrapper for the device wake lock
+ */
 public class WakeLockLifecycle implements DefaultLifecycleObserver
 {
     private final int wakeLockType;
@@ -39,6 +42,11 @@ public class WakeLockLifecycle implements DefaultLifecycleObserver
             mWakeLock.release();
     }
 
+
+    public static LifecycleObserver newWakeLock(Context context, int level)
+    {
+        return new WakeLockLifecycle(context, level);
+    }
 
     public static LifecycleObserver newPartialWakeLock(Context context)
     {

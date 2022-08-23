@@ -7,6 +7,8 @@ import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
+
 import com.google.api.client.util.Lists;
 
 import java.util.List;
@@ -14,11 +16,10 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import umu.software.activityrecognition.shared.AndroidUtils;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
 
 /**
  * Text-to-Speech singleton for the device.
- *
  */
 public enum TTS
 {
@@ -35,7 +36,10 @@ public enum TTS
     private boolean mTalking = false;
 
 
-
+    /**
+     * Initialize the text-to-speech. Must be called to use it
+     * @param context calling context
+     */
     public void initialize(Context context)
     {
         if (mInitialized || mInitializing)
@@ -47,17 +51,19 @@ public enum TTS
             {
                 mTextToSpeech.setLanguage(mLanguage);
                 Log.i("TTS", "TTS successfully initialized");
+                mVoice = mTextToSpeech.getDefaultVoice();
                 mInitialized = true;
                 mInitializing = false;
-                if(mVoice == null)
-                    mVoice = mTextToSpeech.getDefaultVoice();
-                setVoice(mVoice);
+                mHandler.postDelayed(() -> initialize(context), 2000);
             }
             else
                 Log.e("TTS", "Error while initializing TTS");
         }, "com.google.android.tts");
     }
 
+    /**
+     * Destroys the tts. initialize() must be called again before using it again
+     */
     public void destroy()
     {
         if (!mInitialized)
@@ -70,60 +76,29 @@ public enum TTS
         mHandler = null;
     }
 
-
-
+    /**
+     * Returns whether the tts is speaking ie. say() was recently called
+     * @return whether the tts is speaking
+     */
     public boolean isTalking()
     {
         return mTalking;
     }
 
 
-    public void say(String prompt, Translator translator, UtteranceProgressListener callback)
-    {
-        mHandler.post(() -> {
-            String utternaceId = TTS.class.getName();
-            String translatedPrompt = prompt;
-            Locale currentLanguage = getLanguage();
-
-            if (!mInitialized || (translator != null && !translator.isInitialized()))
-            {
-                callback.onError(utternaceId, TextToSpeech.ERROR);
-                return;
-            }
-            setVoice(mVoice);
-            if (translator != null)
-            {
-                translatedPrompt = translator.translate(prompt);
-                setLanguage(translator.getTargetLanguage());
-            }
-            mTextToSpeech.setOnUtteranceProgressListener(getListener(callback));
-            mTextToSpeech.speak(translatedPrompt, TextToSpeech.QUEUE_FLUSH, null, utternaceId);
-            setLanguage(currentLanguage);
-        });
-    }
-
-
-    public void say(String prompt, UtteranceProgressListener callback)
-    {
-        say(prompt, null, callback);
-    }
-
 
     /**
-     * Sets the language of the speech. A null value will set the default language.
-     * Note that language and voice can be set independently.
+     * Sets the language of the speech. A null value will set the default system language.
      * @param locale the language of the speech
      */
-    public void setLanguage(Locale locale)
+    public void setLanguage(@Nullable Locale locale)
     {
         mLanguage = (locale != null)? locale : Locale.getDefault();
-        if (mInitialized)
-            mTextToSpeech.setLanguage(locale);
     }
 
     /**
-     * Gets the language currently in use
-     * @return the language currently in use
+     * Gets the speech language currently in use
+     * @return the speech language currently in use
      */
     public Locale getLanguage()
     {
@@ -132,11 +107,43 @@ public enum TTS
 
 
     /**
+     * Utters the given prompt on the device's speakers
+     * @param prompt the prompt to say
+     * @param callback callback receiving tts events
+     */
+    public void say(String prompt, UtteranceProgressListener callback)
+    {
+        mHandler.post(() -> {
+            String utteranceId = TTS.class.getName();
+
+            if (!mInitialized)
+            {
+                callback.onError(utteranceId, TextToSpeech.ERROR);
+                return;
+            }
+            mTextToSpeech.setLanguage(mLanguage);
+            if (mVoice != null)
+                mTextToSpeech.setVoice(mVoice);
+            mTextToSpeech.setOnUtteranceProgressListener(getListener(callback));
+            mTextToSpeech.speak(prompt, TextToSpeech.QUEUE_FLUSH, null, utteranceId);
+        });
+    }
+
+    /**
+     * Returns the default TTS voice
+     * @return the default TTS voice
+     */
+    public Voice getDefaultVoice()
+    {
+        return mTextToSpeech.getDefaultVoice();
+    }
+
+    /**
      * Get the available voices
      * @param filter optional filter to filter returned voices. Can be null
      * @return list of available voices
      */
-    public List<Voice> getAvailableVoices(Predicate<Voice> filter)
+    public List<Voice> getAvailableVoices(@Nullable Predicate<Voice> filter)
     {
         if (mTextToSpeech == null)
             return Lists.newArrayList();
@@ -155,9 +162,7 @@ public enum TTS
     public void setVoice(Voice voice)
     {
         mVoice = voice;
-        mLanguage = voice.getLocale();
-        if (mTextToSpeech != null)
-            mTextToSpeech.setVoice(voice);
+        //mLanguage = voice.getLocale();
     }
 
     /**
@@ -172,14 +177,20 @@ public enum TTS
                 setVoice(v);
     }
 
-
+    /**
+     * Sets the voice speed
+     * @param speechRate a value between 0 and 1 indicating the voice speed
+     */
     public void setSpeechRate(float speechRate)
     {
         if (mTextToSpeech != null)
-            mTextToSpeech.setSpeechRate(Math.max(0, speechRate));
+            mTextToSpeech.setSpeechRate(Math.max(0, Math.min(1, speechRate)));
     }
 
-
+    /**
+     * Returns the voice currently in use
+     * @return the voice currently in use
+     */
     public Voice getCurrentVoice()
     {
         return mVoice;

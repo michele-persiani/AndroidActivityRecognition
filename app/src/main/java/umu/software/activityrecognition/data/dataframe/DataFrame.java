@@ -7,23 +7,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+
+/**
+ * Class for dataframes
+ */
 public class DataFrame extends LinkedHashMap<String, Series>
 {
-    public static final String DEFAULT_NAME = "Unnamed";
 
     public static class Row extends LinkedHashMap<String, Object>
     {
-        public Row set(String column, Object value)
-        {
-            put(column, value);
-            return this;
-        }
 
         public Row clone()
         {
@@ -32,7 +29,12 @@ public class DataFrame extends LinkedHashMap<String, Series>
                 shallowCopy.put(key, get(key));
             return shallowCopy;
         }
+
     }
+
+
+    public static final String DEFAULT_NAME = "Unnamed";
+
 
     private String name;
 
@@ -67,13 +69,21 @@ public class DataFrame extends LinkedHashMap<String, Series>
         return Arrays.asList(columns()).contains(column);
     }
 
-
+    /**
+     *
+     * @return ordered array of columns
+     */
     public synchronized String[] columns()
     {
         return  keySet().toArray(new String[size()]);
     }
 
 
+    /**
+     * Order the columns with hte same order of the provided array. Columns not contained in the ordering
+     * array are appended after those being ordered
+     * @param columns columns that will be ordered by their position in the array
+     */
     public synchronized void orderColumns(String... columns)
     {
         LinkedHashMap<String, Series> tmp = new LinkedHashMap<>(this);
@@ -88,7 +98,10 @@ public class DataFrame extends LinkedHashMap<String, Series>
             put(col, tmp.get(col));
     }
 
-
+    /**
+     * Compute mean columnwise
+     * @return a dataframe with a single row
+     */
     public synchronized DataFrame mean()
     {
         return transformByColumn((col, serie) -> {
@@ -98,6 +111,10 @@ public class DataFrame extends LinkedHashMap<String, Series>
         });
     }
 
+    /**
+     * Compute standard deviation columnwise
+     * @return a dataframe with a single row
+     */
     public synchronized DataFrame std()
     {
         return transformByColumn((col, serie) -> {
@@ -116,7 +133,13 @@ public class DataFrame extends LinkedHashMap<String, Series>
         return value.size();
     }
 
-    public synchronized int appendRow(Map<String, Object> row)
+
+    /**
+     *
+     * @param row
+     * @return index of the newly added row
+     */
+    public synchronized int appendRow(Row row)
     {
 
         int size = size();
@@ -124,17 +147,18 @@ public class DataFrame extends LinkedHashMap<String, Series>
             if (!hasColumn(col))
                 put(col, Series.fillSeries(size, this::nullElement));
 
-        for (String col : row.keySet())
-        {
-            Object cell = row.getOrDefault(col, nullElement());
-            cell = (cell == null)? nullElement() : cell;
-            get(col).add(cell);
-        }
+        for (String col : columns())
+            get(col).add(row.getOrDefault(col, nullElement()));
 
         return countRows() - 1;
-
     }
 
+
+    /**
+     *
+     * @param builder
+     * @return index of the newly added row
+     */
     public synchronized int appendRow(Consumer<Row> builder)
     {
         Row row = new Row();
@@ -143,13 +167,26 @@ public class DataFrame extends LinkedHashMap<String, Series>
     }
 
 
+
+
+
+
+    /**
+     * Default cell value used to fill blank cells
+     * @return
+     */
     public synchronized Object nullElement()
     {
         return "";
     }
 
 
-
+    /**
+     * Apply a function column-wise
+     * @param fun function (column_name, column_serie) -> result
+     * @param <R> class of the result
+     * @return result of fun
+     */
     public synchronized <R> List<R> forEachColumn(BiFunction<String, Series, R> fun)
     {
         ArrayList<R> result = new ArrayList<>();
@@ -161,7 +198,11 @@ public class DataFrame extends LinkedHashMap<String, Series>
         return result;
     }
 
-
+    /**
+     * Pops row with the given rowNum
+     * @param rowNum
+     * @return the popped row, or null if rowNum is outside of the range of valid indeces
+     */
     public synchronized Row popRow(int rowNum)
     {
         if (rowNum < 0 || rowNum > countRows())
@@ -227,7 +268,7 @@ public class DataFrame extends LinkedHashMap<String, Series>
     }
 
     /**
-     * Transform the dataframe a row at a time in-place
+     * Transform the dataframe a row at a time and in-place
      * @param fun function manipulating rows
      * @return The transformed dataframe
      */
@@ -244,7 +285,7 @@ public class DataFrame extends LinkedHashMap<String, Series>
     }
 
     /**
-     * Transform the dataframe a coumn at a time in-place
+     * Transform the dataframe a column at a time in-place
      * @param fun function manipulating columns
      * @return The transformed dataframe
      */

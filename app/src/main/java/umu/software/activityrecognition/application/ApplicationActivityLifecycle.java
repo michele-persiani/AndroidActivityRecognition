@@ -10,7 +10,8 @@ import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleRegistry;
 
 /**
- * Used to capture the first onStart() and onResume() called by the first launched activity
+ * ActivityLifecycleCallbacks to capture the first onStart() and onResume() called by the first launched activity.
+ * Used by ApplicationSingleton
  */
 class ApplicationActivityLifecycle implements Application.ActivityLifecycleCallbacks
 {

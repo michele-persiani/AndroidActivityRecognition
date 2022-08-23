@@ -2,7 +2,6 @@ package umu.software.activityrecognition.data.accumulators.consumers;
 
 import com.google.common.primitives.Doubles;
 
-import java.util.Objects;
 import java.util.function.BiConsumer;
 
 import umu.software.activityrecognition.data.dataframe.DataFrame;
@@ -30,5 +29,11 @@ public abstract class ConstMathOperation<T> implements BiConsumer<T, DataFrame.R
             }
     }
 
+    /**
+     * Compute cell-wise operation on the row
+     * @param cellValue cell value
+     * @param constValue constant value
+     * @return
+     */
     public abstract double compute(double cellValue, double constValue);
 }

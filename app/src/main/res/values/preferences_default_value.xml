@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Recordings -->
+    <bool name="recordings_default_use_wake_lock">true</bool>
+    <bool name="recordings_default_record_models">true</bool>
+    <integer name="recordings_default_sensors_delay_millis">50</integer>
+    <integer name="recordings_default_models_delay_millis">2000</integer>
+    <integer name="recordings_default_save_interval_minutes">10</integer>
+
+    <!-- Chatbot -->
+    <integer name="chatbot_default_voice_speed">90</integer>
+    <string name="chatbot_default_language">en-US</string>
+
+
+    <!-- Ping event -->
+    <string name="ping_event_default_event_name">EventClassifyActivityShort</string>
+    <bool name="ping_event_default_send_ping">true</bool>
+    <integer name="ping_event_default_ping_minutes">10</integer>
+
+    <!-- Translator -->
+    <string-array name="translator_default_source_languages">
+        <item>en-US</item>
+        <item>sv-SE</item>
+        <item>it-IT</item>
+    </string-array>
+    <string-array name="translator_default_target_languages">
+        <item>en-US</item>
+    </string-array>
+</resources>

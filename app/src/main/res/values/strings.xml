@@ -1,17 +1,28 @@
 <resources>
     <string name="app_name">Activity Recognition</string>
     <string name="chatbot_activity_name">Chatbot</string>
+    <string name="preferences_activity_name">Preferences</string>
 
     <string name="activity_recognition_watchface_name">Activity Recognition</string>
     <string name="som_watchface_name">Self Organizing Map</string>
     <string name="chatbot_watchface_name">Chatbot</string>
 
 
+    <!-- Notification -->
+    <string name="notification_group_id">umu.software.activityrecognition.NOTIFICATION_GROUP_ID</string>
+    <string name="notification_channel_id">Activity Recognition</string>
 
     <!-- RecordService notification text -->
-    <string name="notification_title">Activity Recognition</string>
-    <string name="notification_text">Recording from sensors</string>
-    <string name="notification_channel_id">Activity Recognition</string>
+    <string name="recording_notification_title">Sensor recordings</string>
+    <string name="recording_notification_text">Recording from sensors</string>
+
+    <!-- DialogflowService notification text -->
+    <string name="chatbot_notification_title">Chatbot</string>
+    <string name="chatbot_notification_text">Chatbot is running. Tap to say something.</string>
+
+
+
+
 
     <!-- Preferences keys -->
 
@@ -24,29 +35,36 @@
 
     <string name="chatbot_language">chatbot_language</string>
     <string name="chatbot_voice_speed">chatbot_voice_speed</string>
+    <string name="chatbot_voice_name">chatbot_voice_name</string>
     <string name="chatbot_send_recurrent_event">chatbot_send_recurrent_event</string>
     <string name="chatbot_recurrent_event_minutes">chatbot_recurrent_event_minutes</string>
     <string name="chatbot_recurrent_event_name">chatbot_recurrent_event_name</string>
+    <string name="chatbot_api_key">chatbot_api_key</string>
+
+    <string name="translator_source_languages">translation_source_languages</string>
+    <string name="translator_target_languages">translation_target_languages</string>
 
 
 
 
 
 
-    <!-- Inside SensorRecordingsFragment -->
+    <!-- Preferences fragment strings -->
     <string name="category_recordings">Recordings</string>
     <string name="recorded_sensors">recorded_sensors</string>
     <string name="recorded_sensors_title">Recorded sensors</string>
     <string name="recorded_sensors_summary">Select which sensors are recorded</string>
 
+    <string name="recorded_models">recorded_models</string>
+    <string name="recorded_models_title">Recorded models</string>
+    <string name="recorded_models_summary">Select which models are recorded</string>
+
     <string name="save_interval_title">Save interval</string>
-    <string name="save_interval_summary">Select how often to save the recordings</string>
+    <string name="save_interval_summary">Select how often to save the recordings (minutes)</string>
     <string name="read_sensor_delay_title">Sensors readings delay</string>
-    <string name="read_sensor_delay_summary">Select the delay in between recordings from the sensors</string>
-    <string name="save_models_interval_title">Models save interval</string>
-    <string name="save_models_interval_summary">Select how often to save model recordings</string>
+    <string name="read_sensor_delay_summary">Select the delay in between recordings from the sensors (milliseconds)</string>
     <string name="read_models_delay_title">Models readings delay</string>
-    <string name="read_models_delay_summary">Select the delay in between recordings from the models</string>
+    <string name="read_models_delay_summary">Select the delay in between recordings from the models (milliseconds)</string>
     <string name="recordings_use_wake_lock_title">Use wake lock</string>
     <string name="recordings_use_wake_lock_summary">Keep the device\'s CPU active while recording</string>
 
@@ -57,11 +75,19 @@
     <string name="chatbot_voice_speed_title">Voice speed</string>
     <string name="chatbot_voice_speed_summary">Select the chatbot\'s voice speed</string>
     <string name="chatbot_send_recurrent_event_key">Autonomously ask questions</string>
-    <string name="chatbot_send_recurrent_event_summary">Whether the chatbot should ask you question while active</string>
+    <string name="chatbot_send_recurrent_event_summary">Whether the chatbot should ask you question when it is active</string>
     <string name="chatbot_recurrent_event_minutes_key">Questions intervals</string>
-    <string name="chatbot_recurrent_event_minutes_summary">Time interval between a set of questions and the other</string>
+    <string name="chatbot_recurrent_event_minutes_summary">Time interval between a set of questions and the other (minutes)</string>
+    <string name="chatbot_recurrent_event_name_key">Questions event name</string>
+    <string name="chatbot_recurrent_event_name_summary">Name of the event that will be sent to Dialogflow to request questions (do not change)</string>
+
+
+
 
     <!-- Misc -->
+    <string name="close">Close</string>
+    <string name="stop">Stop</string>
+    <string name="save">Save</string>
     <string name="request_user_classification">What are you doing?</string>
 
 </resources>

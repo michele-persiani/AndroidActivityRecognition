@@ -8,11 +8,11 @@ import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LifecycleRegistry;
 
-import umu.software.activityrecognition.data.sensors.Sensors;
-import umu.software.activityrecognition.services.RecordServiceHelper;
+import umu.software.activityrecognition.services.recordings.RecordServiceHelper;
 import umu.software.activityrecognition.shared.preferences.Preferences;
 import umu.software.activityrecognition.speech.ASR;
 import umu.software.activityrecognition.speech.TTS;
+import umu.software.activityrecognition.speech.translate.LanguageTranslation;
 
 public class ApplicationSingleton extends Application implements LifecycleOwner
 {
@@ -30,8 +30,7 @@ public class ApplicationSingleton extends Application implements LifecycleOwner
 
         ASR.FREE_FORM.initialize(this);
         TTS.INSTANCE.initialize(this);
-        Sensors.INSTANCE.initialize(this);
-
+        //getPreferences().getInstance(this).edit().clear().apply();
         registerActivityLifecycleCallbacks(new ApplicationActivityLifecycle(mLifecycle));
         mLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_CREATE);
     }
@@ -45,10 +44,18 @@ public class ApplicationSingleton extends Application implements LifecycleOwner
         mLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE);
         mLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_STOP);
         mLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY);
-        Sensors.INSTANCE.destroy();
+        ASR.FREE_FORM.destroy();
+        TTS.INSTANCE.destroy();
+        LanguageTranslation.INSTANCE.closeAllCached();
         sContext = null;
     }
 
+    @Override
+    public void onLowMemory()
+    {
+        super.onLowMemory();
+        LanguageTranslation.INSTANCE.closeAllCached();
+    }
 
     @NonNull
     public ApplicationSingleton getInstance()
@@ -77,12 +84,6 @@ public class ApplicationSingleton extends Application implements LifecycleOwner
         return TTS.INSTANCE;
     }
 
-
-    @NonNull
-    public Sensors getSensors()
-    {
-        return Sensors.INSTANCE;
-    }
 
     @NonNull
     public Preferences getPreferences()

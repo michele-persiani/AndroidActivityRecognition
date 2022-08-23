@@ -15,9 +15,12 @@ import com.google.api.client.util.Lists;
 
 import java.util.List;
 
-import umu.software.activityrecognition.shared.AndroidUtils;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
 
 
+/**
+ * Lifecycle that registers listens for network capabilities
+ */
 public class NetworkCallbackLifecycle extends ConnectivityManager.NetworkCallback implements DefaultLifecycleObserver
 {
     private final Context mContext;
@@ -39,7 +42,7 @@ public class NetworkCallbackLifecycle extends ConnectivityManager.NetworkCallbac
 
 
     @Override
-    public void onStart(@NonNull LifecycleOwner owner)
+    public void onCreate(@NonNull LifecycleOwner owner)
     {
         ConnectivityManager manager = AndroidUtils.getConnectivityManager(mContext);
         NetworkRequest.Builder builder = new NetworkRequest.Builder();
@@ -50,7 +53,7 @@ public class NetworkCallbackLifecycle extends ConnectivityManager.NetworkCallbac
 
 
     @Override
-    public void onStop(@NonNull LifecycleOwner owner)
+    public void onDestroy(@NonNull LifecycleOwner owner)
     {
         ConnectivityManager manager = AndroidUtils.getConnectivityManager(mContext);
         manager.unregisterNetworkCallback(this);

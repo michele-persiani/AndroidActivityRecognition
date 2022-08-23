@@ -18,12 +18,15 @@ import umu.software.activityrecognition.data.accumulators.Accumulator;
 import umu.software.activityrecognition.tflite.model.AccumulatorTFModel;
 
 
+/**
+ * Factory to create Tensorflow Lite models
+ */
 public class TFLiteFactory
 {
     private final Context mContext;
 
 
-    public TFLiteFactory(Context context)
+    private TFLiteFactory(Context context)
     {
         mContext = context;
     }
@@ -31,19 +34,38 @@ public class TFLiteFactory
 
     /**
      * Creates a TFLite model loading its binary file from the assets folder
-     * @param modelAssetBinaryFile name of the binary file in the assets folder
-     * @param inputsBuilder builder for the input accumulators
-     * @return
+     * @param name name of the model
+     * @param modelAssetBinaryFile name of the binary file in the assets folder. eg. 'classifier.tflite'
+     *                             the file is to be put in the /assets folder
+     * @param inputsBuilder builder for the input accumulators. Accumulators are to be added to the argument list.
+     *      *                      The order in the list is the same as the model's inputs
+     * @return a new AccumulatorTFModel
      */
-    public AccumulatorTFModel newAccumulatorAssetModel(String modelAssetBinaryFile, Consumer<List<Accumulator<?>>> inputsBuilder)
+    public AccumulatorTFModel newAccumulatorAssetModel(String name, String modelAssetBinaryFile, Consumer<List<Accumulator<?>>> inputsBuilder)
     {
         Interpreter interpreter = loadInterpreterFromAssets(mContext, modelAssetBinaryFile);
         if (interpreter == null)
-            return null;
+            throw new RuntimeException("Error loading the assets file");
         List<Accumulator<?>> inputs = Lists.newArrayList();
         inputsBuilder.accept(inputs);
 
-        return new AccumulatorTFModel(modelAssetBinaryFile, interpreter, inputs);
+        return newAccumulatorModel(name, interpreter, inputsBuilder);
+    }
+
+    /**
+     * Creates a TFLite model loading its binary file from the assets folder
+     * @param name name of the model
+     * @param interpreter TFLite Interpreter encapsulating a binary model
+     * @param inputsBuilder builder for the input accumulators. Accumulators are to be added to the argument list.
+     *                      The order in the list is the same as the model's inputs
+     * @return a new AccumulatorTFModel
+     */
+    public AccumulatorTFModel newAccumulatorModel(String name, Interpreter interpreter, Consumer<List<Accumulator<?>>> inputsBuilder)
+    {
+        List<Accumulator<?>> inputs = Lists.newArrayList();
+        inputsBuilder.accept(inputs);
+
+        return new AccumulatorTFModel(name, interpreter, inputs);
     }
 
 

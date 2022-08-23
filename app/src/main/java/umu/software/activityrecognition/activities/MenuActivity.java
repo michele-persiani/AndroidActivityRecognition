@@ -20,15 +20,14 @@ import umu.software.activityrecognition.R;
 
 
 /**
- * Class that displays a simple menu as a list of buttons
+ * Activity that displays a simple menu as a list of buttons
  */
 public abstract class MenuActivity extends ListViewActivity
 {
-
     private static final int BUTTON_ID = 12005;
     private boolean mBuilt = false;
 
-    private List<Consumer<ListViewActivity.ViewHolder>> mBuilders = Lists.newArrayList();
+    private final List<Consumer<ListViewActivity.ViewHolder>> mBuilders = Lists.newArrayList();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState)
@@ -40,6 +39,7 @@ public abstract class MenuActivity extends ListViewActivity
         RecyclerView recyclerView = findViewById(R.id.listview);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(new MenuActivity.Adapter());
+        getSupportActionBar().hide();
     }
 
     @Override
@@ -52,20 +52,20 @@ public abstract class MenuActivity extends ListViewActivity
         layout.setLayoutParams(attributLayoutParams);
         layout.setPadding(0, 5, 0, 5);
         layout.setGravity(Gravity.CENTER);
-        Button btn =  new Button(MenuActivity.this);
-        buildButton(btn);
+        Button btn = makeButton();
+        btn.setId(BUTTON_ID);
         layout.addView(btn);
         return layout;
     }
 
     /**
      * Builds a button of the menu. Can set color, font, etc
-     * @param button the button being created
      */
-    protected void buildButton(Button button)
+    protected Button makeButton()
     {
-        button.setId(BUTTON_ID);
+        return new Button(this);
     }
+
 
     protected int getItemCount()
     {
@@ -80,7 +80,7 @@ public abstract class MenuActivity extends ListViewActivity
     }
 
     /**
-     * Add an entry to the menu. Must be used inside buildMenu()
+     * Add an entry to the menu. Can only be used inside buildMenu()
      * @param name the text of the button
      * @param buttonListener the listener
      */
@@ -94,6 +94,12 @@ public abstract class MenuActivity extends ListViewActivity
             btn.setOnClickListener(buttonListener);
         });
     }
+
+    protected void addMenuEntry(int stringResId, View.OnClickListener buttonListener)
+    {
+        addMenuEntry(getString(stringResId), buttonListener);
+    }
+
 
     /**
      * Build the menu of buttons. Use addMenuEntry() to add entries

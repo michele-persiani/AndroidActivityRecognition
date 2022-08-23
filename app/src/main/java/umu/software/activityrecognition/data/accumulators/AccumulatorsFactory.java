@@ -5,6 +5,8 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorManager;
 
+import androidx.annotation.Nullable;
+
 import org.hitlabnz.sensor_fusion_demo.orientationProvider.AccelerometerCompassProvider;
 import org.hitlabnz.sensor_fusion_demo.orientationProvider.CalibratedGyroscopeProvider;
 import org.hitlabnz.sensor_fusion_demo.orientationProvider.ImprovedOrientationSensor1Provider;
@@ -14,7 +16,8 @@ import org.hitlabnz.sensor_fusion_demo.orientationProvider.RotationVectorProvide
 
 import java.util.function.Consumer;
 
-import umu.software.activityrecognition.shared.AndroidUtils;
+import umu.software.activityrecognition.data.dataframe.DataFrame;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
 import umu.software.activityrecognition.tflite.model.TFModel;
 
 
@@ -43,24 +46,25 @@ public class AccumulatorsFactory
     }
 
 
-
     /**
-     * Creates a new instance of the factory
-     * @param sensorManager the sensorManager that will be used by the accumulators
-     * @return a new factory instance
+     * Creates a new accumulator that allows to manually add rows
+     * @param dataframeName the name of the accumulator's dataframe
+     * @return the accumulator
      */
-    public static AccumulatorsFactory newInstance(SensorManager sensorManager)
+    public Accumulator<DataFrame.Row> newRowAccumulator(String dataframeName, @Nullable Consumer<Accumulator<DataFrame.Row>> initializer)
     {
-        return new AccumulatorsFactory(sensorManager);
+        RowAccumulator accum = new RowAccumulator(dataframeName);
+        if (initializer != null)
+            initializer.accept(accum);
+        return accum;
     }
 
-
     /**
-     * Create and add a SensorAccumulator for the default sensor of the given sensorType
+     * Create a SensorAccumulator for the default sensor of the given sensorType
      * @param sensorType the sensor type of the sensor to add.
-     * @param initializer builder to initialize the SensorAccumulator
+     * @param initializer optional builder to initialize the SensorAccumulator
      */
-    public Accumulator<SensorEvent> newDefaultSensor(int sensorType, Consumer<Accumulator<SensorEvent>> initializer)
+    public Accumulator<SensorEvent> newDefaultSensor(int sensorType, @Nullable Consumer<Accumulator<SensorEvent>> initializer)
     {
         Sensor sensor = sensorManager.getDefaultSensor(sensorType);
         return newSensor(sensor, initializer);
@@ -70,12 +74,13 @@ public class AccumulatorsFactory
     /**
      * Create a SensorAccumulator for the given sensor
      * @param sensor the sensor to get the readings from
-     * @param initializer builder to initialize the SensorAccumulator
+     * @param initializer optional builder to initialize the SensorAccumulator
      */
-    public Accumulator<SensorEvent> newSensor(Sensor sensor, Consumer<Accumulator<SensorEvent>> initializer)
+    public Accumulator<SensorEvent> newSensor(Sensor sensor, @Nullable Consumer<Accumulator<SensorEvent>> initializer)
     {
         SensorAccumulator accum = new SensorAccumulator(sensorManager, sensor);
-        initializer.accept(accum);
+        if (initializer != null)
+            initializer.accept(accum);
         return accum;
     }
 
@@ -83,9 +88,9 @@ public class AccumulatorsFactory
     /**
      * Create an accumulator for the given TFModel
      * @param model a supplier for the TFModel to use
-     * @param initializer builder to initialize the TFModelAccumulator
+     * @param initializer optional builder to initialize the TFModelAccumulator
      */
-    public Accumulator<TFModel> newTFModel(TFModel model, Consumer<Accumulator<TFModel>> initializer)
+    public Accumulator<TFModel> newTFModel(TFModel model, @Nullable Consumer<Accumulator<TFModel>> initializer)
     {
         TFModelAccumulator accum = new TFModelAccumulator(model);
         if(initializer != null)
@@ -94,7 +99,7 @@ public class AccumulatorsFactory
     }
 
 
-    public Accumulator<OrientationProvider> newProvider1Accumulator(Consumer<Accumulator<OrientationProvider>> initializer)
+    public Accumulator<OrientationProvider> newProvider1Accumulator(@Nullable Consumer<Accumulator<OrientationProvider>> initializer)
     {
         OrientationProvider orientationProvider = new ImprovedOrientationSensor1Provider(sensorManager);
         Accumulator<OrientationProvider> accum = new OrientationProviderAccumulator(orientationProvider);
@@ -104,7 +109,7 @@ public class AccumulatorsFactory
     }
 
 
-    public Accumulator<OrientationProvider> newProvider2Accumulator(Consumer<Accumulator<OrientationProvider>> initializer)
+    public Accumulator<OrientationProvider> newProvider2Accumulator(@Nullable Consumer<Accumulator<OrientationProvider>> initializer)
     {
         OrientationProvider orientationProvider = new ImprovedOrientationSensor2Provider(sensorManager);
         Accumulator<OrientationProvider> accum = new OrientationProviderAccumulator(orientationProvider);
@@ -114,7 +119,7 @@ public class AccumulatorsFactory
     }
 
 
-    public Accumulator<OrientationProvider> newGravityCompassAccumulator(Consumer<Accumulator<OrientationProvider>> initializer)
+    public Accumulator<OrientationProvider> newGravityCompassAccumulator(@Nullable Consumer<Accumulator<OrientationProvider>> initializer)
     {
         OrientationProvider orientationProvider = new ImprovedOrientationSensor2Provider(sensorManager);
         Accumulator<OrientationProvider> accum = new OrientationProviderAccumulator(orientationProvider);
@@ -124,7 +129,7 @@ public class AccumulatorsFactory
     }
 
 
-    public Accumulator<OrientationProvider> newAccelerometerCompassAccumulator(Consumer<Accumulator<OrientationProvider>> initializer)
+    public Accumulator<OrientationProvider> newAccelerometerCompassAccumulator(@Nullable Consumer<Accumulator<OrientationProvider>> initializer)
     {
         OrientationProvider orientationProvider = new AccelerometerCompassProvider(sensorManager);
         Accumulator<OrientationProvider> accum = new OrientationProviderAccumulator(orientationProvider);
@@ -134,7 +139,7 @@ public class AccumulatorsFactory
     }
 
 
-    public Accumulator<OrientationProvider> newRotationVectorAccumulator(Consumer<Accumulator<OrientationProvider>> initializer)
+    public Accumulator<OrientationProvider> newRotationVectorAccumulator(@Nullable Consumer<Accumulator<OrientationProvider>> initializer)
     {
         OrientationProvider orientationProvider = new RotationVectorProvider(sensorManager);
         Accumulator<OrientationProvider> accum = new OrientationProviderAccumulator(orientationProvider);
@@ -144,7 +149,7 @@ public class AccumulatorsFactory
     }
 
 
-    public Accumulator<OrientationProvider> newCalibratedGyroscopeAccumulator(Consumer<Accumulator<OrientationProvider>> initializer)
+    public Accumulator<OrientationProvider> newCalibratedGyroscopeAccumulator(@Nullable Consumer<Accumulator<OrientationProvider>> initializer)
     {
         OrientationProvider orientationProvider = new CalibratedGyroscopeProvider(sensorManager);
         Accumulator<OrientationProvider> accum = new OrientationProviderAccumulator(orientationProvider);

@@ -29,6 +29,9 @@ import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 
+/**
+ * Watchface that shows the activity's classification result
+ */
 public class ActivityWatchFace extends CanvasWatchFaceService implements Supplier<Map<String, Float>>
 {
     Engine mEngine = null;
