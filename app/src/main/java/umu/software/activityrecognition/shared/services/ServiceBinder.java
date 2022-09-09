@@ -1,17 +1,17 @@
-package umu.software.activityrecognition.services;
+package umu.software.activityrecognition.shared.services;
 
 import android.app.Service;
 import android.os.Binder;
 
 /**
- * Helper class of a binder that encapsulates its service
+ * Helper class of a binder that holds a reference to its service
  * @param <S> class of the Service
  */
-public class LocalBinder<S extends Service> extends Binder
+public class ServiceBinder<S extends Service> extends Binder
 {
     private final S mService;
 
-    public LocalBinder(S service)
+    public ServiceBinder(S service)
     {
         mService = service;
     }

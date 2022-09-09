@@ -1,4 +1,4 @@
-package umu.software.activityrecognition.services.chatbot;
+package umu.software.activityrecognition.services.speech;
 
 import android.app.Service;
 import android.content.Context;
@@ -12,8 +12,8 @@ import java.util.Locale;
 
 import umu.software.activityrecognition.preferences.TranslationPreferences;
 import umu.software.activityrecognition.preferences.initializers.TranslationPreferencesInitializer;
-import umu.software.activityrecognition.services.LocalBinder;
-import umu.software.activityrecognition.services.ServiceConnectionHandler;
+import umu.software.activityrecognition.shared.services.ServiceBinder;
+import umu.software.activityrecognition.shared.services.ServiceConnectionHandler;
 import umu.software.activityrecognition.speech.translate.LanguageTranslation;
 
 /**
@@ -59,7 +59,7 @@ public class TranslationService extends Service
     @Override
     public IBinder onBind(Intent intent)
     {
-        return new LocalBinder<>(this);
+        return new ServiceBinder<>(this);
     }
 
 
@@ -68,8 +68,8 @@ public class TranslationService extends Service
      * @param context calling context
      * @return a binding connection handler.
      */
-    public static ServiceConnectionHandler<LocalBinder<TranslationService>> bind(Context context)
+    public static ServiceConnectionHandler<ServiceBinder<TranslationService>> bind(Context context)
     {
-        return new ServiceConnectionHandler<LocalBinder<TranslationService>>(context).bind(TranslationService.class);
+        return new ServiceConnectionHandler<ServiceBinder<TranslationService>>(context).bind(TranslationService.class);
     }
 }

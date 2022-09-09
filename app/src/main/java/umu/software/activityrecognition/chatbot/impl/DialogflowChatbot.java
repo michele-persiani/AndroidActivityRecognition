@@ -1,4 +1,4 @@
-package umu.software.activityrecognition.chatbot;
+package umu.software.activityrecognition.chatbot.impl;
 
 import android.os.Handler;
 
@@ -30,6 +30,8 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import umu.software.activityrecognition.chatbot.Chatbot;
+import umu.software.activityrecognition.chatbot.ChatbotResponse;
 import umu.software.activityrecognition.shared.util.AndroidUtils;
 import umu.software.activityrecognition.shared.util.Exceptions;
 import umu.software.activityrecognition.shared.util.FunctionLock;
@@ -212,6 +214,7 @@ public class DialogflowChatbot implements Chatbot
         QueryResult result = response.getQueryResult();
         ChatbotResponse answer = new ChatbotResponse();
         answer.setIntent(result.getIntent().getDisplayName());
+        answer.setPromptText(result.getQueryText());
         answer.setAnswerText(result.getFulfillmentText());
         answer.setAction(result.getAction());
         for(Map.Entry<String, Value> p : result.getParameters().getFieldsMap().entrySet()) {

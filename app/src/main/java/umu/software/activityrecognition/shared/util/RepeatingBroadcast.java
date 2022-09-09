@@ -89,7 +89,7 @@ public class RepeatingBroadcast extends BroadcastReceiver
     }
 
     /**
-     * Start sending recurrent broadcasts
+     * Start sending recurrent broadcasts. Stops the current broadcasting if already started
      * @param intervalMillis miliisecond of interval between a broadcast and the other
      * @param intentConsumer optional callback for the broadcasts
      */

@@ -16,11 +16,10 @@
     <string name="recording_notification_title">Sensor recordings</string>
     <string name="recording_notification_text">Recording from sensors</string>
 
-    <!-- DialogflowService notification text -->
-    <string name="chatbot_notification_title">Chatbot</string>
-    <string name="chatbot_notification_text">Chatbot is running. Tap to say something.</string>
 
-
+    <!-- SpeechService notification text -->
+    <string name="speech_notification_title">Voice recognition</string>
+    <string name="speech_notification_text">Tap to say something.</string>
 
 
 
@@ -33,20 +32,21 @@
     <string name="recordings_use_wake_lock">recordings_use_wake_lock</string>
 
 
-    <string name="chatbot_language">chatbot_language</string>
-    <string name="chatbot_voice_speed">chatbot_voice_speed</string>
-    <string name="chatbot_voice_name">chatbot_voice_name</string>
+    <string name="dialogflow_api_key">dialogflow_api_key</string>
     <string name="chatbot_send_recurrent_event">chatbot_send_recurrent_event</string>
     <string name="chatbot_recurrent_event_minutes">chatbot_recurrent_event_minutes</string>
     <string name="chatbot_recurrent_event_name">chatbot_recurrent_event_name</string>
-    <string name="chatbot_api_key">chatbot_api_key</string>
+
+
+
+    <string name="speech_language">speech_language</string>
+    <string name="speech_voice_speed">speech_voice_speed</string>
+    <string name="speech_voice_name">speech_voice_name</string>
+    <string name="speech_max_recognized_results">speech_max_recognized_results</string>
+
 
     <string name="translator_source_languages">translation_source_languages</string>
     <string name="translator_target_languages">translation_target_languages</string>
-
-
-
-
 
 
     <!-- Preferences fragment strings -->

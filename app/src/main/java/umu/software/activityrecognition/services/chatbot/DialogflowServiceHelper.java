@@ -8,11 +8,10 @@ import androidx.annotation.Nullable;
 import com.google.api.client.util.Lists;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
-import umu.software.activityrecognition.services.LocalBinder;
-import umu.software.activityrecognition.services.ServiceConnectionHandler;
+import umu.software.activityrecognition.shared.services.ServiceBinder;
+import umu.software.activityrecognition.shared.services.ServiceConnectionHandler;
 
 
 /**
@@ -34,20 +33,6 @@ public class DialogflowServiceHelper
     }
 
 
-    public ServiceConnectionHandler<LocalBinder<DialogflowService>> bind()
-    {
-        return new ServiceConnectionHandler<LocalBinder<DialogflowService>>(mContext)
-                .setAutoRebind(true)
-                .bind(DialogflowService.class);
-    }
-
-
-    public void configure(@Nullable Boolean foreground)
-    {
-        Intent intent = newIntent(DialogflowService.ACTION_CONFIGURE);
-        if (foreground != null) intent.putExtra(DialogflowService.EXTRA_FOREGROUND, foreground);
-        mContext.startService(intent);
-    }
 
     public void shutdownChatbot()
     {

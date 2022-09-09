@@ -7,9 +7,12 @@
     <integer name="recordings_default_models_delay_millis">2000</integer>
     <integer name="recordings_default_save_interval_minutes">10</integer>
 
-    <!-- Chatbot -->
-    <integer name="chatbot_default_voice_speed">90</integer>
-    <string name="chatbot_default_language">en-US</string>
+    <!-- Speech -->
+
+    <integer name="speech_default_voice_speed">100</integer>
+    <string name="speech_default_language">en-US</string>
+    <integer name="speech_default_max_recognized_results">1</integer>
+
 
 
     <!-- Ping event -->

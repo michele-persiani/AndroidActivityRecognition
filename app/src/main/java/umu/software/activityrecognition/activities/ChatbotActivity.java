@@ -73,7 +73,7 @@ public class ChatbotActivity extends AppCompatActivity
         super.onStop();
         //mActivityRecognition.sendGoodbyeEvent()
         //mActivityRecognition.stopRecordService();
-        mActivityRecognition.askStopRecurrentQuestions();                                              // Stop chatbot's recurrent questions if ever started
+        mActivityRecognition.stopRecurrentQuestions();                                              // Stop chatbot's recurrent questions if ever started
         mActivityRecognition.shutdownChatbot();                                                     // Unbind chatbot and clear sensor label
     }
 
@@ -105,7 +105,6 @@ public class ChatbotActivity extends AppCompatActivity
 
         mBusy = busy;
         mImageView.setImageResource((busy) ? R.drawable.chatbot_on : R.drawable.chatbot_off);
-
     }
 
 

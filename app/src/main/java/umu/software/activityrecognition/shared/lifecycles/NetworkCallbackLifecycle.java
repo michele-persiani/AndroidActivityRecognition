@@ -75,13 +75,21 @@ public class NetworkCallbackLifecycle extends ConnectivityManager.NetworkCallbac
         mAvailableNetworks.remove(network);
     }
 
+    /**
+     * Returns the first available network, or null
+     * @return the first available network, or null
+     */
     @Nullable
     public Network getNetwork()
     {
         return (mAvailableNetworks.size() > 0)? mAvailableNetworks.get(0) : null;
     }
 
-    public boolean isCapabilityAvailable()
+    /**
+     * Returns whether there is at least a network available
+     * @return whether there is at least a network available
+     */
+    public boolean isNetworkAvailable()
     {
         return mAvailability > 0;
     }

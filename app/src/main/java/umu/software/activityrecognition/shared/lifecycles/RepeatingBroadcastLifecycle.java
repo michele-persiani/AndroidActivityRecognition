@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 
@@ -25,7 +26,7 @@ public class RepeatingBroadcastLifecycle implements DefaultLifecycleObserver
     private RepeatingBroadcast mBroadcast;
 
 
-    public RepeatingBroadcastLifecycle(@NonNull Context context, long intervalMillis, BiConsumer<Context, Intent> intentConsumer)
+    public RepeatingBroadcastLifecycle(@NonNull Context context, long intervalMillis, @Nullable BiConsumer<Context, Intent> intentConsumer)
     {
         mContext = context.getApplicationContext();
         mIntervalMillis = Math.max(1000, intervalMillis);
@@ -33,7 +34,7 @@ public class RepeatingBroadcastLifecycle implements DefaultLifecycleObserver
     }
 
     /**
-     * Used to configure the broadcast receiver
+     * Configure the broadcast receiver through a builder method
      * @param broadcastBuilder builder method
      */
     public void configure(Consumer<RepeatingBroadcast> broadcastBuilder)

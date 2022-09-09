@@ -28,8 +28,6 @@ public class ApplicationSingleton extends Application implements LifecycleOwner
         sContext = this;
         mLifecycle = new LifecycleRegistry(this);
 
-        ASR.FREE_FORM.initialize(this);
-        TTS.INSTANCE.initialize(this);
         //getPreferences().getInstance(this).edit().clear().apply();
         registerActivityLifecycleCallbacks(new ApplicationActivityLifecycle(mLifecycle));
         mLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_CREATE);
@@ -44,21 +42,12 @@ public class ApplicationSingleton extends Application implements LifecycleOwner
         mLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE);
         mLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_STOP);
         mLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY);
-        ASR.FREE_FORM.destroy();
-        TTS.INSTANCE.destroy();
-        LanguageTranslation.INSTANCE.closeAllCached();
         sContext = null;
     }
 
-    @Override
-    public void onLowMemory()
-    {
-        super.onLowMemory();
-        LanguageTranslation.INSTANCE.closeAllCached();
-    }
 
     @NonNull
-    public ApplicationSingleton getInstance()
+    public static ApplicationSingleton getInstance()
     {
         return sContext;
     }
@@ -68,20 +57,6 @@ public class ApplicationSingleton extends Application implements LifecycleOwner
     public static Context getContext()
     {
         return sContext;
-    }
-
-
-
-    public ASR getSpeechRecognizer()
-    {
-        return ASR.FREE_FORM;
-    }
-
-
-    @NonNull
-    public TTS getTextToSpeech()
-    {
-        return TTS.INSTANCE;
     }
 
 

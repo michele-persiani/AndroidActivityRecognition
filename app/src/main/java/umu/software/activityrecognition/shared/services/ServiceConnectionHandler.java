@@ -1,4 +1,4 @@
-package umu.software.activityrecognition.services;
+package umu.software.activityrecognition.shared.services;
 
 import android.app.Service;
 import android.content.ComponentName;
@@ -41,7 +41,7 @@ public class ServiceConnectionHandler<B extends Binder> implements ServiceConnec
     /**
      * Sets the builder for the intents used to bind the services. This function is not reset when
      * after binding
-     * @param builder a function to initialize intents or null to reset it
+     * @param builder a function to initialize intents, or null to reset it
      * @return this instance
      */
     public ServiceConnectionHandler<B> setIntentBuilder(@Nullable Consumer<Intent> builder)
@@ -52,7 +52,6 @@ public class ServiceConnectionHandler<B extends Binder> implements ServiceConnec
 
     /**
      * Sets whether the connection should rebind itself when onServiceDisconnected() is called.
-     * Is reset when calling unbind()
      * @param autoRebind whether to auto rebind
      * @return this instance
      */

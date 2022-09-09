@@ -54,10 +54,12 @@ public enum TTS
                 mVoice = mTextToSpeech.getDefaultVoice();
                 mInitialized = true;
                 mInitializing = false;
+            }
+            else {
+                Log.e("TTS", "Error while initializing TTS");
+                mInitializing = false;
                 mHandler.postDelayed(() -> initialize(context), 2000);
             }
-            else
-                Log.e("TTS", "Error while initializing TTS");
         }, "com.google.android.tts");
     }
 

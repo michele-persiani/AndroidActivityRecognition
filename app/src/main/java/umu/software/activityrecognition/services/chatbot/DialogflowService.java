@@ -1,47 +1,36 @@
 package umu.software.activityrecognition.services.chatbot;
 
-import android.annotation.SuppressLint;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Parcelable;
-import android.speech.tts.Voice;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.NotificationCompat;
 import androidx.startup.AppInitializer;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
-import umu.software.activityrecognition.R;
 import umu.software.activityrecognition.chatbot.Chatbot;
 import umu.software.activityrecognition.chatbot.ChatbotResponse;
 import umu.software.activityrecognition.chatbot.ChatbotResponseCallback;
-import umu.software.activityrecognition.chatbot.DialogflowChatbot;
-import umu.software.activityrecognition.chatbot.SpeechChatbot;
+import umu.software.activityrecognition.chatbot.impl.DialogflowChatbot;
+import umu.software.activityrecognition.chatbot.impl.SpeechChatbot;
 import umu.software.activityrecognition.preferences.DialogflowServicePreferences;
 import umu.software.activityrecognition.preferences.initializers.ChatbotPreferencesInitializer;
-import umu.software.activityrecognition.services.LocalBinder;
-import umu.software.activityrecognition.shared.preferences.Preference;
-import umu.software.activityrecognition.shared.util.UniqueId;
-import umu.software.activityrecognition.shared.lifecycles.ForegroundServiceLifecycle;
-import umu.software.activityrecognition.shared.lifecycles.LifecycleService;
+import umu.software.activityrecognition.shared.services.ServiceBinder;
+import umu.software.activityrecognition.shared.services.LifecycleService;
 
 
 /**
@@ -86,13 +75,6 @@ public class DialogflowService extends LifecycleService
     public static final String ACTION_START_LISTENING       = "umu.software.activityrecognition.ACTION_START_LISTENING";
 
 
-    /** Configure the service. Nb. extras are optional and the behavior of configure
-     * depends on the provided extras */
-    public static final String ACTION_CONFIGURE             = "umu.software.activityrecognition.ACTION_CONFIGURE";
-    /** Whether this should be configured as a foreground service showing a notification to the user: Bool */
-    public static final String EXTRA_FOREGROUND             = "EXTRA_FOREGROUND";
-
-
     /** Shutdown the chatbot. Doesn't have effect if the service is being bound by another component*/
     public static final String ACTION_SHUTDOWN              = "umu.software.activityrecognition.ACTION_SHUTDOWN";
 
@@ -105,9 +87,8 @@ public class DialogflowService extends LifecycleService
 
 
     private SpeechChatbot mChatBot;
-    private LocalBinder<DialogflowService> mBinder;
+    private ServiceBinder<DialogflowService> mBinder;
     private DialogflowServicePreferences mPreferences;
-    private ForegroundServiceLifecycle mForegroundLifecycle;
 
     private final Map<String, BroadcastReceiver> mResponsesCallbacks = Maps.newConcurrentMap();
 
@@ -119,11 +100,6 @@ public class DialogflowService extends LifecycleService
                 .getInstance(this)
                 .initializeComponent(ChatbotPreferencesInitializer.class);
         connect();
-        setVoicePersona();
-
-        mPreferences.language().registerListener(p -> setVoicePersona());
-        mPreferences.voiceSpeed().registerListener(p -> setVoicePersona());
-        mPreferences.voiceName().registerListener(p -> setVoicePersona());
     }
 
 
@@ -139,7 +115,7 @@ public class DialogflowService extends LifecycleService
     {
         logger().i("onBind() -> %s", intent);
         if (mBinder == null)
-            mBinder = new LocalBinder<>(this);
+            mBinder = new ServiceBinder<>(this);
         return mBinder;
     }
 
@@ -152,9 +128,6 @@ public class DialogflowService extends LifecycleService
         Bundle extras = (intent.getExtras() != null)? intent.getExtras() : new Bundle();
         switch (action)
         {
-            case ACTION_CONFIGURE:
-                setForeground(extras);
-                break;
             case ACTION_SEND_EVENT:
                 sendChatbotEvent(extras);
                 break;
@@ -162,7 +135,6 @@ public class DialogflowService extends LifecycleService
                 startListening();
                 break;
             case ACTION_SHUTDOWN:
-                stopForeground(true);
                 stopSelf();
                 break;
             default:
@@ -200,7 +172,7 @@ public class DialogflowService extends LifecycleService
         if (mChatBot != null)
             mChatBot.disconnect(r -> {});
 
-        String jsonKey = mPreferences.apiKey().get();
+        String jsonKey = mPreferences.dialogflowApiKey().get();
 
         Chatbot chatbot = new DialogflowChatbot(jsonKey);
         chatbot = new ChatbotResponseCallback(chatbot, response -> {
@@ -208,91 +180,18 @@ public class DialogflowService extends LifecycleService
             broadcast.setAction(ACTION_CHATBOT_RESPONSE)
                     .putExtra(EXTRA_RESPONSE, (Parcelable) response);
             sendBroadcast(broadcast);
+
+            String answer = response.getAnswerText();
+            if (answer != null && answer.length() > 0)
+                Toast.makeText(this, answer, Toast.LENGTH_LONG).show();
         });
-        mChatBot = new SpeechChatbot(chatbot, true);
+        mChatBot = new SpeechChatbot(this, chatbot);
 
         mChatBot.connect(result -> logger().i("Chatbot connected (%s).", result));
     }
 
 
 
-    /**
-     * Show the foreground service notification
-     * @param params bundle of parameters
-     */
-    @SuppressLint("LaunchActivityFromNotification")
-    private void setForeground(Bundle params)
-    {
-        boolean startForeground = params.getBoolean(EXTRA_FOREGROUND, false);
-
-        if (startForeground && !isForeground())
-        {
-            PendingIntent listenPendingIntent = PendingIntent.getService(this,10432,
-                    new Intent(this, DialogflowService.class).setAction(ACTION_START_LISTENING),
-                    PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-            PendingIntent stopPendingIntent = PendingIntent.getService(this,10433,
-                    new Intent(this, DialogflowService.class).setAction(ACTION_SHUTDOWN),
-                    PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-            NotificationCompat.Action closeAction = new NotificationCompat.Action.Builder(null, getString(R.string.close), stopPendingIntent).build();
-
-            mForegroundLifecycle = new ForegroundServiceLifecycle(
-                    this,
-                    UniqueId.uniqueInt(),
-                    getString(R.string.notification_channel_id),
-                    builder -> {
-                        builder.setContentTitle(getString(R.string.chatbot_notification_title))
-                                .setContentText(getString(R.string.chatbot_notification_text))
-                                .setGroup(getString(R.string.notification_group_id))
-                                .addAction(closeAction)
-                                .setSmallIcon(R.mipmap.ic_watch_round)
-                                .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_watch_round))
-                                .setContentIntent(listenPendingIntent)
-                                .setAutoCancel(false)
-                                .setOngoing(true);
-                    }
-            );
-
-            getLifecycle().addObserver(mForegroundLifecycle);
-        }
-        else if(!startForeground && isForeground())
-        {
-            getLifecycle().removeObserver(mForegroundLifecycle);
-            mForegroundLifecycle = null;
-            stopForeground(true);
-        }
-    }
-
-    /**
-     * Sets the voice language and parameters of the chatbot
-     */
-    private void setVoicePersona()
-    {
-        String language = mPreferences.language().get();
-        float voiceSpeed = mPreferences.voiceSpeed().get()/100.f;
-        String voiceName = mPreferences.voiceName().get();
-
-        Function<List<Voice>, Integer> voiceSelector = voices -> {
-            List<String> names = voices.stream().map(Voice::getName).collect(Collectors.toList());
-            if (names.contains(voiceName))
-                return names.indexOf(voiceName);
-            return names.contains(voiceName) ? names.indexOf(voiceName) : 0;
-        };
-
-        applyIfConnected(speechChatbot -> {
-            speechChatbot.setVoicePersona(
-                    Locale.forLanguageTag(language),
-                    voiceSpeed,
-                    null                                        // TODO voices for languages different from the current locale don't work
-            );
-            logger().i("Set voice persona with language (%s), speed (%s) and voice (%s)",
-                    language,
-                    voiceSpeed,
-                    voiceName
-            );
-        });
-    }
 
     /**
      * Send an event to the chatbot
@@ -330,26 +229,6 @@ public class DialogflowService extends LifecycleService
 
 
     /**
-     * Returns the available voices for the current persona
-     * @return available voices
-     */
-    public List<Voice> getAvailableVoices()
-    {
-        return applyIfConnected(SpeechChatbot::getAvailableVoices, Lists.newArrayList());
-    }
-
-
-    /**
-     * Start listening with the chatbot
-     */
-    public void startListening()
-    {
-        applyIfConnected(chatbot -> chatbot.startListening(response -> {}));
-    }
-
-
-
-    /**
      * Send an event to the chatbot
      * @param eventName the event's name
      * @param eventArgs the event's parameters
@@ -358,6 +237,16 @@ public class DialogflowService extends LifecycleService
     {
         Map<String, String> args = (eventArgs == null)? Maps.newHashMap() : eventArgs;
         applyIfConnected(chatbot -> chatbot.sendEvent(eventName, args, response -> {}));
+    }
+
+
+
+    /**
+     * Start listening with the chatbot
+     */
+    public void startListening()
+    {
+        applyIfConnected(chatbot -> chatbot.startListening(response -> {}));
     }
 
 
@@ -415,6 +304,7 @@ public class DialogflowService extends LifecycleService
         return cleared;
     }
 
+
     /** Returns whether the chatbot is initialized and connected
      * @return Whether the chatbot is initialized and connected
      */
@@ -423,14 +313,6 @@ public class DialogflowService extends LifecycleService
         return mChatBot != null && mChatBot.isConnected();
     }
 
-
-    /**
-     * @return whether the service is in a foreground state
-     */
-    public boolean isForeground()
-    {
-        return mForegroundLifecycle != null;
-    }
 
 
 

@@ -1,7 +1,6 @@
-package umu.software.activityrecognition.shared.lifecycles;
+package umu.software.activityrecognition.shared.services;
 
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 
 import androidx.annotation.NonNull;
@@ -9,16 +8,15 @@ import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LifecycleRegistry;
-import androidx.startup.Initializer;
 
-import com.google.common.collect.Lists;
-
-import java.util.List;
-
-import umu.software.activityrecognition.shared.preferences.PreferencesModule;
 import umu.software.activityrecognition.shared.util.LogHelper;
 
-
+/**
+ * Started service with an associated lifecycle
+ * onCreate() will invoke start event
+ * onStartCommand() the first call will invoke start, resume events. Subsequent calls won't throw lifecycle events
+ * onDestroy() will invoke pause, stop, destroy events
+ */
 public abstract class LifecycleService extends Service implements LifecycleOwner, LifecycleEventObserver
 {
     public static final String ACTION_STATE_CHANGED = "umu.software.activityrecognition.ACTION_STATE_CHANGED";

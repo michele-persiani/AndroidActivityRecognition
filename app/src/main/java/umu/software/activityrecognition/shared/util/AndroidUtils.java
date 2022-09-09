@@ -131,7 +131,7 @@ public class AndroidUtils
     /**
      * Switch on the wifi and forces it to be on. Requires permission CHANGE_WIFI_STATE
      * @param context the calling context
-     * @return the WifiLock locking the wifi to on. The lock is already acquired.
+     * @return the WifiLock locking the wifi to on. The lock is already acquired and should be released after usage.
      */
     public static WifiManager.WifiLock forceWifiOn(Context context)
     {

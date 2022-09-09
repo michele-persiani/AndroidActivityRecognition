@@ -19,39 +19,17 @@ public class DialogflowServicePreferences extends PreferencesModule
     @Override
     protected void initialize()
     {
-        language().init(
-                getResources().getString(R.string.chatbot_default_language)
-        );
-        voiceSpeed().init(
-                getResources().getInteger(R.integer.chatbot_default_voice_speed)
-        );
-        apiKey().init(
+        dialogflowApiKey().init(
                 AndroidUtils.readRawResourceFile(mContext, R.raw.dialogflow_credentials)
         );
     }
 
 
-    public Preference<String> apiKey()
+    public Preference<String> dialogflowApiKey()
     {
-        return getString(R.string.chatbot_api_key);
+        return getString(R.string.dialogflow_api_key);
     }
 
-
-    public Preference<String> language()
-    {
-        return getString(R.string.chatbot_language);
-    }
-
-    
-    public Preference<Integer> voiceSpeed()
-    {
-        return getInt(R.string.chatbot_voice_speed);
-    }
-
-    public Preference<String> voiceName()
-    {
-        return getString(R.string.chatbot_voice_name);
-    }
 
 
 }

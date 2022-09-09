@@ -9,14 +9,14 @@
 
     <PreferenceCategory android:title="@string/category_chatbot">
 
-        <ListPreference
-            app:key="@string/chatbot_language"
+       <ListPreference
+            app:key="@string/speech_language"
             app:title="@string/chatbot_language_title"
             app:summary="@string/chatbot_language_summary"
-            android:entries="@array/chatbot_languages"
-            app:entryValues="@array/chatbot_languages_values"/>
+            android:entries="@array/speech_languages"
+            app:entryValues="@array/speech_languages_values"/>
         <SeekBarPreference
-            app:key="@string/chatbot_voice_speed"
+            app:key="@string/speech_voice_speed"
             app:title="@string/chatbot_voice_speed_title"
             app:summary="@string/chatbot_voice_speed_summary"
             app:allowDividerBelow="true"

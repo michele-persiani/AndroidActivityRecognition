@@ -12,9 +12,9 @@ import java.util.function.Consumer;
 
 import umu.software.activityrecognition.preferences.PingEventServicePreferences;
 import umu.software.activityrecognition.preferences.initializers.PingEventPreferencesInitializer;
-import umu.software.activityrecognition.services.LocalBinder;
+import umu.software.activityrecognition.shared.services.ServiceBinder;
 import umu.software.activityrecognition.shared.util.RepeatingBroadcast;
-import umu.software.activityrecognition.shared.lifecycles.LifecycleService;
+import umu.software.activityrecognition.shared.services.LifecycleService;
 import umu.software.activityrecognition.shared.preferences.Preference;
 
 
@@ -43,7 +43,7 @@ public class PingChatbotService extends LifecycleService
     @Override
     public IBinder onBind(Intent intent)
     {
-        return new LocalBinder<>(this);
+        return new ServiceBinder<>(this);
     }
 
     public boolean isSendingPingEvents()
@@ -115,6 +115,13 @@ public class PingChatbotService extends LifecycleService
         );
         logger().i("Sending event (%s) every (%s) minutes", mPreferences.pingEventName().get(), pingMinutes);
     }
+
+
+    public boolean isBroadcasting()
+    {
+        return mBroadcast.isBroadcasting();
+    }
+
 
     private void stopAndQuit()
     {

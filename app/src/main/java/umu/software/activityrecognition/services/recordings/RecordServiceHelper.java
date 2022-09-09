@@ -12,7 +12,7 @@ import androidx.core.content.ContextCompat;
 import java.util.function.Consumer;
 
 import umu.software.activityrecognition.data.dataframe.RowParcelable;
-import umu.software.activityrecognition.services.ServiceConnectionHandler;
+import umu.software.activityrecognition.shared.services.ServiceConnectionHandler;
 
 
 /**

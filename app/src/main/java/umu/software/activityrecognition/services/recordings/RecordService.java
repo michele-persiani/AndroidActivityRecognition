@@ -30,21 +30,20 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import umu.software.activityrecognition.R;
-import umu.software.activityrecognition.data.accumulators.consumers.EventConsumersFactory;
 import umu.software.activityrecognition.data.dataframe.RowParcelable;
 import umu.software.activityrecognition.preferences.RecordServicePreferences;
 import umu.software.activityrecognition.data.accumulators.Accumulator;
 import umu.software.activityrecognition.data.accumulators.AccumulatorsFactory;
 import umu.software.activityrecognition.data.accumulators.AccumulatorsLifecycle;
 import umu.software.activityrecognition.preferences.initializers.RecordingsPreferencesInitializer;
-import umu.software.activityrecognition.services.LocalBinder;
+import umu.software.activityrecognition.shared.services.ServiceBinder;
 import umu.software.activityrecognition.shared.preferences.Preference;
 import umu.software.activityrecognition.shared.util.AndroidUtils;
 import umu.software.activityrecognition.shared.util.RepeatingBroadcast;
 import umu.software.activityrecognition.shared.util.UniqueId;
 import umu.software.activityrecognition.shared.lifecycles.ForegroundServiceLifecycle;
 import umu.software.activityrecognition.shared.lifecycles.LifecycleDelegateObserver;
-import umu.software.activityrecognition.shared.lifecycles.LifecycleService;
+import umu.software.activityrecognition.shared.services.LifecycleService;
 import umu.software.activityrecognition.shared.lifecycles.WakeLockLifecycle;
 import umu.software.activityrecognition.data.dataframe.DataFrame;
 import umu.software.activityrecognition.data.persistence.Persistence;
@@ -74,7 +73,7 @@ import umu.software.activityrecognition.tflite.model.AccumulatorTFModel;
  */
 public class RecordService extends LifecycleService
 {
-    public static class Binder extends LocalBinder<RecordService>
+    public static class Binder extends ServiceBinder<RecordService>
     {
         public Binder(RecordService service){
             super(service);
@@ -209,7 +208,7 @@ public class RecordService extends LifecycleService
         }
         if (!isRecording())
             stopRecording(null);
-        return START_STICKY;
+        return START_REDELIVER_INTENT;
     }
 
     private void stopRecording(@Nullable Intent intent)
@@ -440,7 +439,7 @@ public class RecordService extends LifecycleService
         stopRecurrentSave();
 
         long saveIntervalMillis = TimeUnit.MILLISECONDS.convert(
-                mPreferences.saveIntervalMinutes().get(),
+                Math.max(1, mPreferences.saveIntervalMinutes().get()),
                 TimeUnit.MINUTES
         );
 
@@ -451,7 +450,7 @@ public class RecordService extends LifecycleService
                 saveIntent.setAction(ACTION_SAVE_ZIP_CLEAR);
                 startService(saveIntent);
             }));
-            logger().i("Starting to save every %s seconds", TimeUnit.SECONDS.convert(saveIntervalMillis, TimeUnit.MILLISECONDS));
+            logger().i("Recurrently saving every %s seconds", TimeUnit.SECONDS.convert(saveIntervalMillis, TimeUnit.MILLISECONDS));
         }
     }
 

@@ -2,6 +2,7 @@ package umu.software.activityrecognition.application;
 
 import android.content.Context;
 import android.os.Binder;
+import android.widget.Toast;
 
 import com.google.common.collect.Lists;
 
@@ -9,8 +10,8 @@ import java.util.List;
 import java.util.function.Predicate;
 
 import umu.software.activityrecognition.chatbot.ChatbotResponse;
-import umu.software.activityrecognition.services.LocalBinder;
-import umu.software.activityrecognition.services.ServiceConnectionHandler;
+import umu.software.activityrecognition.shared.services.ServiceBinder;
+import umu.software.activityrecognition.shared.services.ServiceConnectionHandler;
 import umu.software.activityrecognition.services.chatbot.DialogflowService;
 import umu.software.activityrecognition.services.chatbot.DialogflowServiceHelper;
 import umu.software.activityrecognition.services.chatbot.PingChatbotService;
@@ -25,8 +26,8 @@ public class ActivityRecognition
 {
     public static final String ACTION_START_RECORDING           = "StartRecording";
     public static final String ACTION_STOP_RECORDING            = "StopRecording";
-    public static final String INTENT_CLASSIFY_ACTIVITY_SHORT   = "ClassifyActivityShort";
-    public static final String INTENT_CLASSIFY_ACTIVITY_LONG    = "ClassifyActivityLong";
+    public static final String INTENT_CLASSIFY_ACTIVITY_SHORT   = "ActionClassifyActivityShort";
+    public static final String INTENT_CLASSIFY_ACTIVITY_LONG    = "ActionClassifyActivityLong";
     public static final String ACTION_START_QUESTIONS           = "ActionStartRecurrentQuestions";
     public static final String ACTION_STOP_QUESTIONS            = "ActionStopRecurrentQuestions";
 
@@ -43,10 +44,9 @@ public class ActivityRecognition
     private static final String CHATBOT_USAGE                   = "CHATBOT_USAGE";
 
     private final RecordServiceHelper mRecordingsHelper;
-    private final DialogflowServiceHelper mDialogflowHelper;
     private final Context mContext;
     private String mParticipantName;
-    private final ServiceConnectionHandler<LocalBinder<DialogflowService>> mDialogflowConnection;
+    private final ServiceConnectionHandler<ServiceBinder<DialogflowService>> mDialogflowConnection;
     private final ServiceConnectionHandler<Binder> mPingServiceConnection;
 
     private static final Object sLock = new Object();
@@ -58,7 +58,6 @@ public class ActivityRecognition
         context = context.getApplicationContext();
         mContext = context;
         mRecordingsHelper = RecordServiceHelper.newInstance(context);
-        mDialogflowHelper = DialogflowServiceHelper.newInstance(context);
         mDialogflowConnection = new ServiceConnectionHandler<>(context);
         mPingServiceConnection = new ServiceConnectionHandler<>(context);
     }
@@ -79,7 +78,6 @@ public class ActivityRecognition
 
     public void startChatbot()
     {
-        mDialogflowHelper.configure(true);
         mDialogflowConnection.unbind();
         mDialogflowConnection
                 .enqueue(binder -> {
@@ -107,8 +105,10 @@ public class ActivityRecognition
                             INTENT_CLASSIFY_ACTIVITY_LONG + INTENT_CLASSIFY_ACTIVITY_SHORT,
                             newResponseFilter(false, INTENT_CLASSIFY_ACTIVITY_LONG, INTENT_CLASSIFY_ACTIVITY_SHORT),
                             (context, response) -> {
-                                String activity = response.toString();
-                                mRecordingsHelper.setSensorsLabel(activity);
+                                if (isAskingQuestions()) {
+                                    String activity = response.toString();
+                                    mRecordingsHelper.setSensorsLabel(activity);
+                                }
                             }
                     );
                 }).bind(DialogflowService.class);
@@ -117,26 +117,25 @@ public class ActivityRecognition
 
     public void sendWelcomeEvent()
     {
-        mDialogflowHelper.sendChatbotEvent(EVENT_WELCOME);
+        mDialogflowConnection.applyBound(binder -> binder.getService().sendChatbotEvent(EVENT_WELCOME, null));
     }
 
 
     public void sendGoodbyeEvent()
     {
-        mDialogflowHelper.sendChatbotEvent(EVENT_GOODBYE);
+        mDialogflowConnection.applyBound(binder -> binder.getService().sendChatbotEvent(EVENT_GOODBYE, null));
     }
 
 
     public void sendClassifyEvent()
     {
-        mDialogflowHelper.sendChatbotEvent(EVENT_CLASSIFY_ACTIVITY);
+        mDialogflowConnection.applyBound(binder -> binder.getService().sendChatbotEvent(EVENT_CLASSIFY_ACTIVITY, null));
     }
 
 
     public void shutdownChatbot()
     {
         stopRecurrentQuestions();
-        mDialogflowHelper.shutdownChatbot();
         mDialogflowConnection.unbind();
         mRecordingsHelper.setSensorsLabel(null);
         mRecordingsHelper.recordEvent(CHATBOT_USAGE, event -> event.put("chatbot_on", false));
@@ -147,12 +146,12 @@ public class ActivityRecognition
     {
         if (isAskingQuestions())
             return;
-        mDialogflowHelper.sendChatbotEvent(EVENT_START_QUESTIONS);
+        mDialogflowConnection.applyBound(binder -> binder.getService().sendChatbotEvent(EVENT_START_QUESTIONS, null));
     }
 
     public void askStopRecurrentQuestions()
     {
-        mDialogflowHelper.sendChatbotEvent(EVENT_STOP_QUESTIONS);
+        mDialogflowConnection.applyBound(binder -> binder.getService().sendChatbotEvent(EVENT_STOP_QUESTIONS, null));
     }
 
     public void startRecurrentQuestions()
@@ -177,16 +176,23 @@ public class ActivityRecognition
     public boolean isAskingQuestions()
     {
         return mPingServiceConnection.applyBoundFunction( binder -> {
-            LocalBinder<PingChatbotService> localBInder = (LocalBinder<PingChatbotService>) binder;
-            return localBInder.getService().isSendingPingEvents();
+            ServiceBinder<PingChatbotService> serviceBInder = (ServiceBinder<PingChatbotService>) binder;
+            return serviceBInder.getService().isSendingPingEvents();
         }, false);
     }
 
     public void startListening()
     {
         mDialogflowConnection.applyBound(binder -> {
+            boolean connected = binder.getService().isConnected();
+            if (!connected) {
+                Toast.makeText(mContext, "Chatbot not connected", Toast.LENGTH_SHORT).show();
+            }
             binder.getService().startListening();
-            mRecordingsHelper.recordEvent(CHATBOT_USAGE, event -> event.put("start_listening", true));
+            mRecordingsHelper.recordEvent(CHATBOT_USAGE, event -> {
+                event.put("start_listening", true);
+                event.put("connected", connected);
+            });
         });
     }
 

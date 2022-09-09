@@ -30,6 +30,7 @@ public enum ASR
     WEB_SEARCH(RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH);
 
 
+
     class LanguageDetailsChecker extends BroadcastReceiver
     {
         LogHelper mLog = LogHelper.newClassTag("Language Details");
@@ -60,8 +61,10 @@ public enum ASR
 
     private Locale mLocale = Locale.getDefault();
     private Vibrator mVibrator;
+
     private boolean mListening = false;
     private int mMaxResults = 1;
+    private long mCompleteSilenceMillis = 4000;
 
     private String mLanguagePreference = null;
     private List<String> mSupportedLanguages = null;
@@ -83,6 +86,19 @@ public enum ASR
     }
 
 
+
+    public void destroy()
+    {
+        if (!isInitialized())
+            return;
+        stopListening();
+        mSpeechRecognizer.setRecognitionListener(null);
+        mSpeechRecognizer.destroy();
+        mSpeechRecognizer = null;
+        mVibrator = null;
+        mListening = false;
+    }
+
     public void getSupportedLanguages(Context context)
     {
         Intent detailsIntent =  new Intent(RecognizerIntent.ACTION_GET_LANGUAGE_DETAILS);
@@ -95,19 +111,6 @@ public enum ASR
                 null,
                 null
         );
-    }
-
-
-    public void destroy()
-    {
-        if (!isInitialized())
-            return;
-        stopListening();
-        mSpeechRecognizer.setRecognitionListener(null);
-        mSpeechRecognizer.destroy();
-        mSpeechRecognizer = null;
-        mVibrator = null;
-        mListening = false;
     }
 
     public boolean isInitialized()
@@ -155,6 +158,14 @@ public enum ASR
         return mMaxResults;
     }
 
+
+    public void setInputCompleteSilenceMillis(long millis)
+    {
+        mCompleteSilenceMillis = millis;
+    }
+
+
+
     /**
      * Returns whether the speech recognizer is listening
      * @return whether the speech recognizer is listening
@@ -179,7 +190,7 @@ public enum ASR
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, mMaxResults);
         intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
         //intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 3000);
-        //intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 5000);
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, mCompleteSilenceMillis);
 
         mHandler.post(() -> {
             if (mListening || ! isInitialized())
@@ -208,6 +219,8 @@ public enum ASR
         if (mSpeechRecognizer == null)
             return;
         mHandler.post(() -> {
+            if (!isInitialized())
+                return;
             mSpeechRecognizer.stopListening();
             mListening = false;
             mVibrator.vibrate(
@@ -243,7 +256,7 @@ public enum ASR
     /**
      * Wraps the callback with a state-tracking logic ie. to provide isListening()
      * @param wrapped the wrapped listener that will be called along the updates to the ASR state
-     * @return the translating listener
+     * @return
      */
     private RecognitionListener wrapListener(RecognitionListener wrapped)
     {

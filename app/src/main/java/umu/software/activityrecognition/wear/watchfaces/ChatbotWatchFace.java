@@ -1,14 +1,23 @@
 package umu.software.activityrecognition.wear.watchfaces;
 
+import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
+import android.net.wifi.WifiManager;
 import android.os.Handler;
+import android.os.PowerManager;
 import android.os.SystemClock;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.util.Log;
 import android.view.SurfaceHolder;
+
+import androidx.annotation.NonNull;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -25,6 +34,9 @@ import umu.software.activityrecognition.wear.watchfaces.drawing.PainterFactory;
 public class ChatbotWatchFace extends CanvasWatchFaceService
 {
     private ActivityRecognition mActivity;
+    private PowerManager.WakeLock mWakeLock;
+    private WifiManager.WifiLock mWifiLock;
+    private ConnectivityManager.NetworkCallback mNetworkCallback;
 
 
     @Override
@@ -35,9 +47,12 @@ public class ChatbotWatchFace extends CanvasWatchFaceService
         mActivity.startChatbot();
         mActivity.startRecordService();
         mActivity.askStartRecurrentQuestions();
+
+        mWakeLock = AndroidUtils.getWakeLock(this, PowerManager.FULL_WAKE_LOCK);
+        mWakeLock.acquire();
+        requestInternet();
         Log.i("Chatbot", "onCreate()");
     }
-
 
     @Override
     public void onDestroy()
@@ -46,8 +61,37 @@ public class ChatbotWatchFace extends CanvasWatchFaceService
         mActivity.stopRecordService();
         mActivity.stopRecurrentQuestions();
         mActivity.shutdownChatbot();
+        mWakeLock.release();
+        releaseInternet();
     }
 
+
+    private void requestInternet()
+    {
+        ConnectivityManager cm = getSystemService(ConnectivityManager.class);
+        NetworkRequest request = new NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build();
+        mNetworkCallback = new ConnectivityManager.NetworkCallback(){
+            @Override
+            public void onAvailable(@NonNull Network network)
+            {
+                super.onAvailable(network);
+            }
+        };
+        cm.requestNetwork(request, mNetworkCallback);
+        mWifiLock = AndroidUtils.forceWifiOn(this);
+
+    }
+
+    private void releaseInternet()
+    {
+        if (mNetworkCallback == null)
+            return;
+        ConnectivityManager cm = getSystemService(ConnectivityManager.class);
+        cm.unregisterNetworkCallback(mNetworkCallback);
+        mWifiLock.release();
+    }
 
 
     @Override
@@ -195,6 +239,8 @@ public class ChatbotWatchFace extends CanvasWatchFaceService
             super.onDestroy();
             mHandler.getLooper().quit();
         }
+
+
     }
 
 }
