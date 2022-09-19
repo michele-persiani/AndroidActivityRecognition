@@ -42,11 +42,13 @@ public abstract class AbstractChatbot implements Chatbot
     public void sendMessage(CharSequence message, @Nullable Consumer<ChatbotResponse> cbkResponse)
     {
         executor.submit( () -> {
-            ChatbotResponse response = new ChatbotResponse();
-            response.setPromptText(message.toString());
-            processMessage(message.toString(), response);
-            if (cbkResponse != null)
+            if (!isConnected()) return;
+            ChatbotResponse response = processMessage(message.toString());
+
+            if (cbkResponse != null) {
+                response.setPromptText(message.toString());
                 cbkResponse.accept(response);
+            }
         });
     }
 
@@ -54,8 +56,9 @@ public abstract class AbstractChatbot implements Chatbot
     public void sendEvent(String name, @Nullable Map<String, String> params, @Nullable Consumer<ChatbotResponse> cbkResponse)
     {
         executor.submit( () -> {
-            ChatbotResponse response = new ChatbotResponse();
-            processEvent(name, params, response);
+            if (!isConnected()) return;
+            ChatbotResponse response = processEvent(name, params);
+
             if (cbkResponse != null)
                 cbkResponse.accept(response);
         });
@@ -73,8 +76,9 @@ public abstract class AbstractChatbot implements Chatbot
         locale = language;
     }
 
-    protected abstract void processEvent(String name, @Nullable Map<String, String> params, ChatbotResponse response);
+
+    protected abstract ChatbotResponse processEvent(String name, @Nullable Map<String, String> params);
 
 
-    protected abstract void processMessage(String message, ChatbotResponse response);
+    protected abstract ChatbotResponse processMessage(String message);
 }

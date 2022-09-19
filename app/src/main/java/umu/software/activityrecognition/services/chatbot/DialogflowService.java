@@ -99,7 +99,7 @@ public class DialogflowService extends LifecycleService
         mPreferences = AppInitializer
                 .getInstance(this)
                 .initializeComponent(ChatbotPreferencesInitializer.class);
-        connect();
+        initializeChatbot();
     }
 
 
@@ -162,7 +162,7 @@ public class DialogflowService extends LifecycleService
     /**
      * Connect to the chatbot.
      */
-    private void connect()
+    private void initializeChatbot()
     {
         logger().i("Chatbot connecting...");
 
