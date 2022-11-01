@@ -7,15 +7,22 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 
 import umu.software.activityrecognition.chatbot.Chatbot;
 import umu.software.activityrecognition.chatbot.ChatbotResponse;
 
+
+/**
+ * Base class for chatbots that uses an executor to handle messages and events
+ */
 public abstract class AbstractChatbot implements Chatbot
 {
-    private ExecutorService executor;
-    private Locale locale = Locale.getDefault();
+    protected ExecutorService executor;
+    private Locale locale = Locale.ENGLISH;
+
+
 
     @Override
     public void connect(@Nullable Consumer<Boolean> successCbk)
@@ -32,11 +39,14 @@ public abstract class AbstractChatbot implements Chatbot
         executor = null;
     }
 
+
     @Override
     public boolean isConnected()
     {
         return executor != null;
     }
+
+
 
     @Override
     public void sendMessage(CharSequence message, @Nullable Consumer<ChatbotResponse> cbkResponse)

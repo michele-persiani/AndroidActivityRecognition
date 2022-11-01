@@ -4,26 +4,50 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="../../../../../layout/custom_preview.xml" value="0.23072916666666668" />
+        <entry key="app/src/main/res/drawable/border.xml" value="0.3655" />
+        <entry key="app/src/main/res/drawable/button.xml" value="0.3655" />
         <entry key="app/src/main/res/drawable/ic_watch_background.xml" value="0.2295" />
+        <entry key="app/src/main/res/layout/activity_audio_record.xml" value="0.3450192389910218" />
         <entry key="app/src/main/res/layout/activity_chatbot.xml" value="0.30294287362954414" />
+        <entry key="app/src/main/res/layout/activity_listview_activity.xml" value="0.47327917913638307" />
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.5419198055893074" />
         <entry key="app/src/main/res/layout/activity_orientation.xml" value="1.575657894736842" />
+        <entry key="app/src/main/res/layout/activity_preferences.xml" value="0.47327917913638307" />
+        <entry key="app/src/main/res/layout/activity_questions_list.xml" value="0.35185976913210776" />
+        <entry key="app/src/main/res/layout/activity_rms.xml" value="0.2815049864007253" />
         <entry key="app/src/main/res/layout/activity_settings.xml" value="0.19230769230769232" />
         <entry key="app/src/main/res/layout/activity_sockets.xml" value="0.25" />
         <entry key="app/src/main/res/layout/activity_start_record_service.xml" value="0.6743421052631579" />
         <entry key="app/src/main/res/layout/buttons_gui.xml" value="0.8102678571428571" />
+        <entry key="app/src/main/res/layout/dialog_string_list.xml" value="0.47327917913638307" />
+        <entry key="app/src/main/res/layout/dialog_string_list_item.xml" value="0.2973708068902992" />
+        <entry key="app/src/main/res/layout/holder_main_menu.xml" value="0.3685335613510047" />
+        <entry key="app/src/main/res/layout/holder_question_item.xml" value="0.35185976913210776" />
+        <entry key="app/src/main/res/layout/holder_sensor.xml" value="0.35185976913210776" />
+        <entry key="app/src/main/res/layout/holder_text_item_add.xml" value="0.17195988299206016" />
+        <entry key="app/src/main/res/layout/holder_text_item_select.xml" value="0.35185976913210776" />
+        <entry key="app/src/main/res/layout/holder_text_line_add.xml" value="0.351004702864472" />
+        <entry key="app/src/main/res/layout/holder_voice_recorder.xml" value="0.33" />
+        <entry key="app/src/main/res/layout/holder_voice_select.xml" value="0.47327917913638307" />
+        <entry key="app/src/main/res/layout/holder_voice_selector.xml" value="0.35185976913210776" />
         <entry key="app/src/main/res/layout/sensor_adapter_text.xml" value="0.3453125" />
         <entry key="app/src/main/res/layout/sensor_holder.xml" value="0.5" />
         <entry key="app/src/main/res/layout/sensors_list.xml" value="0.203125" />
+        <entry key="app/src/main/res/layout/string_list_dialog.xml" value="0.47327917913638307" />
+        <entry key="app/src/main/res/layout/string_list_dialog_item.xml" value="0.4724241128687473" />
         <entry key="app/src/main/res/layout/view_listview.xml" value="0.14356884057971014" />
         <entry key="app/src/main/res/layout/view_preference_item.xml" value="0.33" />
+        <entry key="app/src/main/res/layout/voice_holder.xml" value="0.31637451902522445" />
         <entry key="app/src/main/res/mipmap-anydpi-v26/ic_watch.xml" value="0.1" />
         <entry key="app/src/main/res/mipmap-anydpi-v26/ic_watch_round.xml" value="0.126" />
-        <entry key="app/src/main/res/xml/preferences.xml" value="0.2833333333333333" />
+        <entry key="app/src/main/res/xml/preferences.xml" value="0.5" />
         <entry key="app/src/main/res/xml/preferences_recorded_sensors.xml" value="0.19230769230769232" />
         <entry key="app/src/main/res/xml/watch_face.xml" value="0.2705128205128205" />
       </map>
     </option>
+  </component>
+  <component name="FrameworkDetectionExcludesConfiguration">
+    <file type="web" url="file://$PROJECT_DIR$" />
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_11" default="true" project-jdk-name="Android Studio default JDK" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/build/classes" />

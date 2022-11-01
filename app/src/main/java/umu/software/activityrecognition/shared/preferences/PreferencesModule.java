@@ -4,10 +4,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 
-import androidx.preference.PreferenceManager;
-
 import com.google.common.collect.Maps;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -20,22 +19,24 @@ import java.util.function.Function;
 public abstract class PreferencesModule
 {
     protected final Context mContext;
-    private final SharedPreferences mSharedPreferences;
+    protected final SharedPreferences mSharedPreferences;
 
     private final Map<String, Preference<?>> mPreferences = Maps.newHashMap();
+
 
     public PreferencesModule(Context context)
     {
         mContext = context.getApplicationContext();
-        mSharedPreferences = Preferences.DEFAULT.getInstance(mContext);
+        mSharedPreferences = NamedSharedPreferences.DEFAULT_PREFERENCES.getInstance(mContext);
         initialize();
     }
 
 
-    protected String getStringFromId(int resId)
+    protected String getStringRes(int resId)
     {
         return mContext.getString(resId);
     }
+
 
     protected Resources getResources()
     {
@@ -49,7 +50,7 @@ public abstract class PreferencesModule
      * @param <T> datatype of the preference
      * @return a cached Preference if present (with the given key) or a newly created Preference that is added to the cache
      */
-    protected <T> Preference<T> getPreference(String key, Function<PreferenceFactory, Preference<T>> factoryMethod)
+    public <T> Preference<T> getPreference(String key, Function<PreferenceFactory, Preference<T>> factoryMethod)
     {
         if (!mPreferences.containsKey(key))
         {
@@ -63,71 +64,86 @@ public abstract class PreferencesModule
 
     /* Helper methods to get Preferences for standard datatypes */
 
-    protected Preference<String> getString(String key)
+    public Preference<String> getString(String key)
     {
         return getPreference(key, f -> f.stringPreference(key));
     }
 
-    protected Preference<String> getString(int keyResId)
+    public Preference<String> getString(int keyResId)
     {
-        String key = getStringFromId(keyResId);
+        String key = getStringRes(keyResId);
         return getString(key);
     }
 
-    protected Preference<Boolean> getBoolean(String key)
+    public Preference<Boolean> getBoolean(String key)
     {
         return getPreference(key, f -> f.booleanPreference(key));
     }
 
-    protected Preference<Boolean> getBoolean(int keyResId)
+    public Preference<Boolean> getBoolean(int keyResId)
     {
-        String key = getStringFromId(keyResId);
+        String key = getStringRes(keyResId);
         return getBoolean(key);
     }
 
-    protected Preference<Float> getFloat(String key)
+    public Preference<Float> getFloat(String key)
     {
         return getPreference(key, f -> f.floatPreference(key));
     }
 
-    protected Preference<Float> getFloat(int keyResId)
+    public Preference<Float> getFloat(int keyResId)
     {
-        String key = getStringFromId(keyResId);
+        String key = getStringRes(keyResId);
         return getFloat(key);
     }
 
-    protected Preference<Integer> getInt(String key)
+    public Preference<Integer> getInt(String key)
     {
         return getPreference(key, f -> f.integerPreference(key));
     }
 
-    protected Preference<Integer> getInt(int keyResId)
+    public Preference<Integer> getInt(int keyResId)
     {
-        String key = getStringFromId(keyResId);
+        String key = getStringRes(keyResId);
         return getInt(key);
     }
 
-    protected Preference<Long> getLong(String key)
+    public Preference<Long> getLong(String key)
     {
         return getPreference(key, f -> f.longPreference(key));
     }
 
-    protected Preference<Long> getLong(int keyResId)
+    public Preference<Long> getLong(int keyResId)
     {
-        String key = getStringFromId(keyResId);
+        String key = getStringRes(keyResId);
         return getLong(key);
     }
 
-    protected Preference<Set<String>> getStringSet(String key)
+    public Preference<Set<String>> getStringSet(String key)
     {
         return getPreference(key, f -> f.stringSetPreference(key));
     }
 
-    protected Preference<Set<String>> getStringSet(int keyResId)
+
+    public Preference<Set<String>> getStringSet(int keyResId)
     {
-        String key = getStringFromId(keyResId);
+        String key = getStringRes(keyResId);
         return getStringSet(key);
     }
+
+
+    public Preference<List<String>> getStringList(String key)
+    {
+        return getPreference(key, f -> f.stringListPreference(key));
+    }
+
+
+    public Preference<List<String>> getStringList(int keyResId)
+    {
+        String key = getStringRes(keyResId);
+        return getStringList(key);
+    }
+
 
     /**
      * Clear all listeners of all Preference of this module
@@ -145,6 +161,7 @@ public abstract class PreferencesModule
         clearListeners();
         mPreferences.clear();
     }
+
 
     /**
      * Initialize the properties of the module. Use with Preferences' init() metohds

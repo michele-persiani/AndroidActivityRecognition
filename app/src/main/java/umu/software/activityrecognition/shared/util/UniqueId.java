@@ -9,7 +9,8 @@ public class UniqueId
 {
     private UniqueId() {}
 
-    public static int uniqueInt() {
+    public static int uniqueInt()
+    {
         UUID idOne = UUID.randomUUID();
         String str = "" + idOne;
         int uid = str.hashCode();

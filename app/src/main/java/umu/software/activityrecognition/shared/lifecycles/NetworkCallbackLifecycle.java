@@ -14,6 +14,8 @@ import androidx.lifecycle.LifecycleOwner;
 import com.google.api.client.util.Lists;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import umu.software.activityrecognition.shared.util.AndroidUtils;
 
@@ -29,6 +31,10 @@ public class NetworkCallbackLifecycle extends ConnectivityManager.NetworkCallbac
 
     private final List<Network> mAvailableNetworks = Lists.newArrayList();
 
+    private final List<Runnable> mCommands = Lists.newArrayList();
+
+    private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
+
     /**
      *
      * @param context the calling context
@@ -40,9 +46,34 @@ public class NetworkCallbackLifecycle extends ConnectivityManager.NetworkCallbac
         mCapabilities = capabilities;
     }
 
+    public int[] getCapabilities()
+    {
+        return mCapabilities;
+    }
+
+    /**
+     * Enqueue a command to be executed when the network is available. That is either now or later
+     * @param command command to enqueue
+     */
+    public synchronized void enqueueCommand(Runnable command)
+    {
+        if (isNetworkAvailable())
+            mExecutor.submit(command);
+        else
+            mCommands.add(command);
+    }
+
+
+    /**
+     * Clears the command queue
+     */
+    public synchronized void clearCommandsQueue()
+    {
+        mCommands.clear();
+    }
 
     @Override
-    public void onCreate(@NonNull LifecycleOwner owner)
+    public void onStart(@NonNull LifecycleOwner owner)
     {
         ConnectivityManager manager = AndroidUtils.getConnectivityManager(mContext);
         NetworkRequest.Builder builder = new NetworkRequest.Builder();
@@ -51,24 +82,33 @@ public class NetworkCallbackLifecycle extends ConnectivityManager.NetworkCallbac
         manager.registerNetworkCallback(builder.build(), this);
     }
 
-
     @Override
-    public void onDestroy(@NonNull LifecycleOwner owner)
+    public void onStop(@NonNull LifecycleOwner owner)
     {
         ConnectivityManager manager = AndroidUtils.getConnectivityManager(mContext);
         manager.unregisterNetworkCallback(this);
     }
 
     @Override
-    public void onAvailable(@NonNull Network network)
+    public void onDestroy(@NonNull LifecycleOwner owner)
+    {
+        clearCommandsQueue();
+        mExecutor.shutdownNow();
+    }
+
+    @Override
+    public synchronized void onAvailable(@NonNull Network network)
     {
         super.onAvailable(network);
         mAvailability += 1;
         mAvailableNetworks.add(network);
+
+        while (mCommands.size() > 0)
+            mExecutor.submit(mCommands.remove(0));
     }
 
     @Override
-    public void onLost(@NonNull Network network)
+    public synchronized void onLost(@NonNull Network network)
     {
         super.onLost(network);
         mAvailability = Math.max(0, mAvailability - 1);

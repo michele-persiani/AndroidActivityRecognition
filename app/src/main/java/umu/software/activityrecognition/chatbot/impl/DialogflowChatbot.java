@@ -57,7 +57,7 @@ public class DialogflowChatbot implements Chatbot
 
     private Locale language = Locale.forLanguageTag("en-US");
 
-    LogHelper log = LogHelper.newClassTag(this);
+    private final LogHelper log = LogHelper.newClassTag(this);
 
 
     public DialogflowChatbot(Supplier<InputStream> credentialsSupplier)

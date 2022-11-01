@@ -14,7 +14,6 @@ import umu.software.activityrecognition.R;
 import umu.software.activityrecognition.application.ActivityRecognition;
 import umu.software.activityrecognition.shared.util.AndroidUtils;
 import umu.software.activityrecognition.shared.lifecycles.WakeLockLifecycle;
-import umu.software.activityrecognition.speech.ASR;
 
 
 public class ChatbotActivity extends AppCompatActivity
@@ -43,6 +42,7 @@ public class ChatbotActivity extends AppCompatActivity
 
         //setAmbientEnabled();
         mActivityRecognition = ActivityRecognition.getInstance(this);
+        mActivityRecognition.onCreate();
         if (getResources().getBoolean(R.bool.iswearable))
             setupWear();
     }
@@ -60,27 +60,23 @@ public class ChatbotActivity extends AppCompatActivity
     {
         super.onStart();
         setChatbotImage();
-        mActivityRecognition.startChatbot();                                                   // Bind and start the chatbot (keep binding on)
         mActivityRecognition.startRecordService();                                                  // Start recordings and auto-save
-        mActivityRecognition.askStartRecurrentQuestions();
-        //mActivityRecognition.sendWelcomeEvent()
-        ASR.FREE_FORM.getSupportedLanguages(this);
+        mActivityRecognition.startRecurrentQuestions();
     }
 
     @Override
     protected void onStop()
     {
         super.onStop();
-        //mActivityRecognition.sendGoodbyeEvent()
-        //mActivityRecognition.stopRecordService();
+        mActivityRecognition.stopRecordService();
         mActivityRecognition.stopRecurrentQuestions();                                              // Stop chatbot's recurrent questions if ever started
-        mActivityRecognition.shutdownChatbot();                                                     // Unbind chatbot and clear sensor label
     }
 
     @Override
     protected void onDestroy()
     {
         super.onDestroy();
+        mActivityRecognition.onDestroy();
         mWifiLock.release();
     }
 
@@ -88,7 +84,9 @@ public class ChatbotActivity extends AppCompatActivity
     private void initializeGUI()
     {
         mImageView = findViewById(R.id.imageView);
-        mImageView.setOnClickListener(view -> mActivityRecognition.startListening());
+        mImageView.setOnClickListener(view -> {
+            mActivityRecognition.classifyActivity();
+        });
         mImageView.setImageResource(R.drawable.chatbot_off);
     }
 
@@ -96,7 +94,7 @@ public class ChatbotActivity extends AppCompatActivity
 
     private void setChatbotImage()
     {
-        boolean busy = mActivityRecognition.isChatbotBusy();
+        boolean busy = mActivityRecognition.isAskingQuestions();
         if (getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.CREATED))
             mHandler.postDelayed(this::setChatbotImage, 300);
 

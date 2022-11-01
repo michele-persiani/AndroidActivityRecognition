@@ -2,6 +2,7 @@ package umu.software.activityrecognition.application;
 
 import android.app.Application;
 import android.content.Context;
+import android.os.StrictMode;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.Lifecycle;
@@ -9,10 +10,7 @@ import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LifecycleRegistry;
 
 import umu.software.activityrecognition.services.recordings.RecordServiceHelper;
-import umu.software.activityrecognition.shared.preferences.Preferences;
-import umu.software.activityrecognition.speech.ASR;
-import umu.software.activityrecognition.speech.TTS;
-import umu.software.activityrecognition.speech.translate.LanguageTranslation;
+import umu.software.activityrecognition.shared.preferences.NamedSharedPreferences;
 
 public class ApplicationSingleton extends Application implements LifecycleOwner
 {
@@ -27,9 +25,12 @@ public class ApplicationSingleton extends Application implements LifecycleOwner
         super.onCreate();
         sContext = this;
         mLifecycle = new LifecycleRegistry(this);
+        StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
+        StrictMode.setVmPolicy(builder.build());
 
         //getPreferences().getInstance(this).edit().clear().apply();
         registerActivityLifecycleCallbacks(new ApplicationActivityLifecycle(mLifecycle));
+
         mLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_CREATE);
     }
 
@@ -61,9 +62,9 @@ public class ApplicationSingleton extends Application implements LifecycleOwner
 
 
     @NonNull
-    public Preferences getPreferences()
+    public NamedSharedPreferences getPreferences()
     {
-        return Preferences.DEFAULT;
+        return NamedSharedPreferences.DEFAULT_PREFERENCES;
     }
 
 

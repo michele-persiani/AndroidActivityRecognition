@@ -40,6 +40,8 @@ public abstract class PreferencesEditor implements Consumer<SharedPreferences>
 
     protected abstract void performEdit();
 
+
+
     /*
     Functions to initialize values. Values are initialized only if not already present in the preferences
      */
@@ -57,6 +59,8 @@ public abstract class PreferencesEditor implements Consumer<SharedPreferences>
     public void initStringSet(String k, Set<String> v) { initValue(k, (e) -> e.putStringSet(k, v));}
 
     public void initStringSet(String k, String... v) { initValue(k, (e) -> e.putStringSet(k, Sets.newHashSet(v)));}
+
+
 
     /*
     Functions to modify values.

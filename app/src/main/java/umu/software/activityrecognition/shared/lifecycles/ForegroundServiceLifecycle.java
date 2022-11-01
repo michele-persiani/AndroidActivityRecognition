@@ -10,8 +10,6 @@ import androidx.core.app.NotificationCompat;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 
-import java.util.Random;
-import java.util.UUID;
 import java.util.function.Consumer;
 
 import umu.software.activityrecognition.shared.util.AndroidUtils;
@@ -21,11 +19,14 @@ import umu.software.activityrecognition.shared.util.AndroidUtils;
  */
 public class ForegroundServiceLifecycle implements DefaultLifecycleObserver
 {
+    public final static int DEFAULT_NOTIFICATION_CHANNEL_ID = 100543;
+    public final static String DEFAULT_NOTIFICATION_CHANNEL_NAME ="ForegroundServiceNotificationChannel";
+
     private final Consumer<NotificationCompat.Builder> mNotificationBuilder;
     private final String mChannelName;
     private final int mNotificationId;
     private final Service mService;
-
+    private NotificationCompat.Builder mBuilder;
 
 
     public ForegroundServiceLifecycle(Service service, int id, String notificationChannel, Consumer<NotificationCompat.Builder> notificationBuilder)
@@ -41,8 +42,8 @@ public class ForegroundServiceLifecycle implements DefaultLifecycleObserver
     {
         this(
                 service,
-                new Random().nextInt(100000) + 100000,
-                String.format("NotificationChannel-%s", UUID.randomUUID()),
+                DEFAULT_NOTIFICATION_CHANNEL_ID,
+                DEFAULT_NOTIFICATION_CHANNEL_NAME,
                 notificationBuilder
         );
     }
@@ -52,13 +53,45 @@ public class ForegroundServiceLifecycle implements DefaultLifecycleObserver
         return mNotificationId;
     }
 
+
     public String getNotificationChannel()
     {
         return mChannelName;
     }
 
 
-    public void setupForegroundService()
+
+    public void updateNotification(Consumer<NotificationCompat.Builder> notificationBuilder)
+    {
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(mService, mChannelName);
+        notificationBuilder.accept(builder);
+        builder.setVibrate(null);
+        Notification n = builder.build();
+        AndroidUtils
+                .getNotificationManager(mService)
+                .notify(mNotificationId, n);
+    }
+
+
+    public void updateNotification(String contentText)
+    {
+
+        NotificationCompat.Builder builder = mBuilder;
+        mBuilder.setContentText(contentText);
+        Notification n = builder.build();
+        AndroidUtils
+                .getNotificationManager(mService)
+                .notify(mNotificationId, n);
+    }
+
+    public void cancelNotification()
+    {
+        AndroidUtils.getNotificationManager(mService).cancel(mNotificationId);
+    }
+
+    @Override
+    public void onCreate(@NonNull LifecycleOwner owner)
     {
         NotificationChannel channel = new NotificationChannel(
                 mChannelName,
@@ -74,19 +107,14 @@ public class ForegroundServiceLifecycle implements DefaultLifecycleObserver
         NotificationCompat.Builder builder = new NotificationCompat.Builder(mService, mChannelName);
         mNotificationBuilder.accept(builder);
         Notification n = builder.build();
+        mBuilder = builder;
         mService.startForeground(mNotificationId, n);
-
-    }
-
-    @Override
-    public void onCreate(@NonNull LifecycleOwner owner)
-    {
-        setupForegroundService();
     }
 
     @Override
     public void onDestroy(@NonNull LifecycleOwner owner)
     {
+        cancelNotification();
         mService.stopForeground(true);
     }
 }

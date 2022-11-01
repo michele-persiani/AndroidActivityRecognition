@@ -6,8 +6,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     >
 
-
     <PreferenceCategory android:title="@string/category_chatbot">
+
 
        <ListPreference
             app:key="@string/speech_language"
@@ -15,6 +15,16 @@
             app:summary="@string/chatbot_language_summary"
             android:entries="@array/speech_languages"
             app:entryValues="@array/speech_languages_values"/>
+
+        <Preference
+            android:key="Language"
+            android:title="@string/speech_voice_name_title"
+            android:summary="@string/speech_voice_name_summary">
+        <intent
+            android:targetPackage="umu.software.activityrecognition"
+            android:targetClass="umu.software.activityrecognition.activities.preferences.VoicePickerActivity"/>
+        </Preference>
+
         <SeekBarPreference
             app:key="@string/speech_voice_speed"
             app:title="@string/chatbot_voice_speed_title"
@@ -24,43 +34,66 @@
             android:defaultValue="90"
             android:min="10"
             android:max="100"/>
-        <!--
-        <ListPreference
-            app:key="@string/chatbot_recurrent_event_minutes"
-            app:title="@string/chatbot_recurrent_event_minutes_key"
-            app:summary="@string/chatbot_recurrent_event_minutes_summary"
-            android:entries="@array/interval_minutes"
-            app:entryValues="@array/interval_minutes_values"/>
 
-        -->
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_classification">
+
+        <Preference
+            android:title="@string/classify_questions_title"
+            android:summary="@string/classify_questions_summary">
+            <intent
+                android:targetPackage="umu.software.activityrecognition"
+                android:targetClass="umu.software.activityrecognition.activities.preferences.QuestionsListActivity"/>
+        </Preference>
+
+
         <SeekBarPreference
-            app:key="@string/chatbot_recurrent_event_minutes"
-            app:title="@string/chatbot_recurrent_event_minutes_key"
+            app:key="@string/ping_event_recurrent_event_minutes"
+            app:title="@string/chatbot_recurrent_event_minutes_title"
             app:summary="@string/chatbot_recurrent_event_minutes_summary"
-            app:allowDividerAbove="true"
+            app:allowDividerBelow="true"
             app:showSeekBarValue="true"
             android:min="1"
-            android:defaultValue="5"
-            android:max="20"/>
+            android:defaultValue="@integer/ping_event_default_ping_minutes"
+            android:max="30"/>
 
-        <EditTextPreference
-            app:key="@string/chatbot_recurrent_event_name"
-            app:title="@string/chatbot_recurrent_event_name_key"
-            app:summary="@string/chatbot_recurrent_event_name_summary"/>
+
+        <Preference
+                android:title="@string/speech_show_db_title"
+                android:summary="@string/speech_show_db_summary"
+                app:allowDividerAbove="true">
+            <intent
+                    android:targetPackage="umu.software.activityrecognition"
+                    android:targetClass="umu.software.activityrecognition.activities.preferences.AudioRMSActivity"/>
+        </Preference>
+
+
+        <SeekBarPreference
+            app:key="@string/speech_min_silence_secs"
+            app:title="@string/speech_min_silence_secs_title"
+            app:summary="@string/speech_min_silence_secs_summary"
+            app:allowDividerBelow="true"
+            app:showSeekBarValue="true"
+            android:defaultValue="@integer/speech_default_min_silence_secs"
+            android:min="0"
+            android:max="10"/>
+
+        <SeekBarPreference
+            app:key="@string/speech_max_length_secs"
+            app:title="@string/speech_max_length_secs_title"
+            app:summary="@string/speech_max_length_secs_summary"
+            app:allowDividerBelow="true"
+            app:showSeekBarValue="true"
+            android:defaultValue="@integer/speech_default_max_length_secs"
+            android:min="0"
+            android:max="60"/>
 
     </PreferenceCategory>
 
 
     <PreferenceCategory
-        android:title="@string/category_recordings">
-        <!--
-        <ListPreference
-            app:key="@string/save_interval_minutes"
-            app:title="@string/save_interval_title"
-            app:summary="@string/save_interval_summary"
-            android:entries="@array/interval_minutes"
-            app:entryValues="@array/interval_minutes_values"/>
-        -->
+        android:title="@string/category_recordings"
+        app:allowDividerBelow="true">
 
         <SwitchPreference
             android:defaultValue="true"
@@ -71,28 +104,29 @@
 
 
 
+        <SeekBarPreference
+                app:key="@string/save_interval_minutes"
+                app:title="@string/save_interval_title"
+                app:summary="@string/save_interval_summary"
+                app:allowDividerBelow="true"
+                app:showSeekBarValue="true"
+                android:defaultValue="@integer/recordings_default_save_interval_minutes"
+                android:min="1"
+                android:max="20"/>
+
         <Preference
             app:key="@string/recorded_sensors"
             app:title="@string/recorded_sensors_title"
             app:summary="@string/recorded_sensors_summary"
             app:allowDividerAbove="true"/>
 
-        <!--
-        <ListPreference
-            app:key="@string/read_sensor_delay_millis"
-            app:title="@string/read_sensor_delay_title"
-            app:summary="@string/read_sensor_delay_summary"
-            android:entries="@array/readings_delay_millis"
-            app:entryValues="@array/readings_delay_millis_values"
-            app:allowDividerBelow="true"/>
-        -->
 
         <SeekBarPreference
             app:key="@string/read_sensor_delay_millis"
             app:title="@string/read_sensor_delay_title"
             app:summary="@string/read_sensor_delay_summary"
             app:showSeekBarValue="true"
-            android:defaultValue="50"
+            android:defaultValue="@integer/recordings_default_sensors_delay_millis"
             android:min="10"
             android:max="100"/>
 
@@ -109,31 +143,21 @@
             app:allowDividerBelow="true"
             app:showSeekBarValue="true"
             app:seekBarIncrement="50"
-            android:defaultValue="2000"
+            android:defaultValue="@integer/recordings_default_models_delay_millis"
             android:min="50"
             android:max="2000"/>
 
-        <!--
-        <ListPreference
-            app:key="@string/read_models_delay_millis"
-            app:title="@string/read_models_delay_title"
-            app:summary="@string/read_models_delay_summary"
-            android:entries="@array/readings_delay_millis"
-            app:entryValues="@array/readings_delay_millis_values"/>
-        -->
 
 
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/category_miscellaneous"
+        app:allowDividerAbove="true">
 
-        <SeekBarPreference
-            app:key="@string/save_interval_minutes"
-            app:title="@string/save_interval_title"
-            app:summary="@string/save_interval_summary"
-            app:allowDividerAbove="true"
-            app:showSeekBarValue="true"
-            android:defaultValue="10"
-            android:min="1"
-            android:max="20"/>
-
+        <SwitchPreference
+            android:defaultValue="@bool/default_enable_vibration"
+            android:key="@string/enable_vibration"
+            android:title="@string/enable_vibration_title"
+            android:summary="@string/enable_vibration_summary"/>
     </PreferenceCategory>
 
 </PreferenceScreen>

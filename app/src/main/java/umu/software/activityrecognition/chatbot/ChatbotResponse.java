@@ -112,7 +112,7 @@ public class ChatbotResponse implements Serializable, Parcelable
 
     /**
      *
-     * @return the action associated fith the found intent
+     * @return the action associated with the found intent
      */
     public String getAction()
     {
@@ -120,6 +120,11 @@ public class ChatbotResponse implements Serializable, Parcelable
     }
 
 
+    /**
+     * Sets the action associated with the found intent
+     * @param action action name
+     * @return this instance
+     */
     public ChatbotResponse setAction(String action)
     {
         this.action = action;
@@ -139,18 +144,31 @@ public class ChatbotResponse implements Serializable, Parcelable
         return true;
     }
 
+    /**
+     *
+     * @return whether this message describes an error
+     */
     public boolean hasError()
     {
         return exception != null;
     }
 
+
+    /**
+     * Sets an exception in hte response that will mark it as having an error
+     * @param e exception to set
+     * @return this instance
+     */
     public ChatbotResponse setException(Exception e)
     {
         exception = e;
         return this;
     }
 
-
+    /**
+     * Gets the error exception
+     * @return the error exception
+     */
     public Exception getError()
     {
         return exception;

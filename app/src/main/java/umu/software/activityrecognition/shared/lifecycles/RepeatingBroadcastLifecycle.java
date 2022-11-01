@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
+import androidx.work.WorkManager;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -19,7 +20,7 @@ import umu.software.activityrecognition.shared.util.RepeatingBroadcast;
  */
 public class RepeatingBroadcastLifecycle implements DefaultLifecycleObserver
 {
-    private final long mIntervalMillis;
+    private long mIntervalMillis;
     private final BiConsumer<Context, Intent> mIntentConsumer;
     private Context mContext;
 
@@ -41,6 +42,18 @@ public class RepeatingBroadcastLifecycle implements DefaultLifecycleObserver
     {
         broadcastBuilder.accept(mBroadcast);
     }
+
+    public boolean isBroadcasting()
+    {
+        return mBroadcast != null && mBroadcast.isBroadcasting();
+    }
+
+
+    public void setIntervalMillis(long intervalMillis)
+    {
+        mIntervalMillis = intervalMillis;
+    }
+
 
     @Override
     public void onStart(@NonNull LifecycleOwner owner)

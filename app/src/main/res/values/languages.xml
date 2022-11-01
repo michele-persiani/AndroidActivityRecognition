@@ -4,13 +4,11 @@
     <string-array name="speech_languages">
         <item>English</item>
         <item>Svenska</item>
-        <item>Italiano</item>
     </string-array>
 
     <string-array name="speech_languages_values">
         <item>en-US</item>
         <item>sv-SE</item>
-        <item>it-IT</item>
     </string-array>
 
 

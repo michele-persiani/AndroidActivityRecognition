@@ -141,15 +141,16 @@ public class DataFrame extends LinkedHashMap<String, Series>
      */
     public synchronized int appendRow(Row row)
     {
+        if (row.size() > 0)
+        {
+            int size = size();
+            for (String col : row.keySet())
+                if (!hasColumn(col))
+                    put(col, Series.fillSeries(size, this::nullElement));
 
-        int size = size();
-        for (String col : row.keySet())
-            if (!hasColumn(col))
-                put(col, Series.fillSeries(size, this::nullElement));
-
-        for (String col : columns())
-            get(col).add(row.getOrDefault(col, nullElement()));
-
+            for (String col : columns())
+                get(col).add(row.getOrDefault(col, nullElement()));
+        }
         return countRows() - 1;
     }
 
@@ -311,29 +312,4 @@ public class DataFrame extends LinkedHashMap<String, Series>
         return clone;
     }
 
-
-
-    public synchronized String toCSV(boolean printColumnNames)
-    {
-        StringBuilder builder = new StringBuilder();
-
-        if (printColumnNames)
-            addCSVStringsToBuilder(builder, columns());
-
-        forEachRowArray(objects -> {
-            addCSVStringsToBuilder(builder, objects);
-            return null;
-        });
-        return builder.toString();
-    }
-
-    private static void addCSVStringsToBuilder(StringBuilder builder, Object[] objs)
-    {
-        if (objs.length == 0)
-            return;
-        for (int i = 0; i < objs.length - 1; i++)
-            builder.append(objs[i].toString()).append(",");
-        builder.append(objs[objs.length-1]);
-        builder.append(System.lineSeparator());
-    }
 }

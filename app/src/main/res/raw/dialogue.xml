@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dialogue
+    resetAfter="15"
+    >
+
+    <states>
+        <state id="0"   destReset="0" destError="0"/>
+        <state id="1"   destReset="0" destError="0"/>
+        <state id="2"   destReset="2" destError="2"/>
+        <state id="3"   destReset="2" destError="2"/>
+        <state id="100" destReset="0" destError="0"/>
+        <state id="101" destReset="0" destError="0"/>
+        <state id="102" destReset="0" destError="0"/>
+        <state id="103" destReset="0" destError="0"/>
+        <state id="104" destReset="0" destError="0"/>
+        <state id="105" destReset="0" destError="0"/>
+        <state id="200" destReset="2" destError="2"/>
+        <state id="201" destReset="2" destError="2"/>
+        <state id="202" destReset="2" destError="2"/>
+        <state id="203" destReset="2" destError="2"/>
+        <state id="204" destReset="2" destError="2"/>
+        <state id="205" destReset="2" destError="2"/>
+    </states>
+
+    <transition src="0" dest="1">
+        <class name="jaccard" minSimilarity="0.05" words="start"/>
+        <response
+            reset="true"
+            intent="ActionStartRecurrentQuestions"
+            answer="Do you want me to start recording?">
+            <slots>
+                <slot name="consent"/>
+            </slots>
+        </response>
+    </transition>
+
+
+    <transition src="0" dest="1">
+        <class name="event" event="EventStartRecurrentQuestions"/>
+        <response
+            reset="true"
+            intent="ActionStartRecurrentQuestions"
+            answer="Do you want me to start recording?">
+            <slots>
+                <slot name="consent"/>
+            </slots>
+        </response>
+    </transition>
+
+
+
+    <transition src="1" dest="0">
+        <class name="jaccard" minSimilarity="0.05" words="no;nope;non;noo"/>
+        <response
+            reset="false"
+            answer="Ok I will not record"
+            action="ActionStartRecurrentQuestions">
+            <slots>
+                <slot name="consent" value="no"/>
+            </slots>
+        </response>
+    </transition>
+
+
+
+
+
+    <transition src="1" dest="2">
+        <class name="jaccard" minSimilarity="0.05" words="yes;yeah;yep;sure;ok"/>
+        <response
+            reset="false"
+            answer="Ok I will now start recording your activity"
+            action="ActionStartRecurrentQuestions">
+            <slots>
+                <slot name="consent" value="yes"/>
+            </slots>
+        </response>
+    </transition>
+
+
+    <transition src="2" dest="3">
+        <class name="event" event="EventStopRecurrentQuestions"/>
+        <response
+            reset="true"
+            intent="ActionStopRecurrentQuestions"
+            answer="Do you want me to stop recording?">
+            <slots>
+                <slot name="consent"/>
+            </slots>
+        </response>
+    </transition>
+
+
+
+    <transition src="3" dest="0">
+        <class name="jaccard" minSimilarity="0.05" words="yes;yeah;yep;sure;ok"/>
+        <response
+            reset="false"
+            answer="Ok I will now stop recording"
+            action="ActionStopRecurrentQuestions">
+            <slots>
+                <slot name="consent" value="yes"/>
+            </slots>
+        </response>
+    </transition>
+
+
+
+    <transition src="3" dest="2">
+        <class name="jaccard" minSimilarity="0.05" words="no;nope;non;noo"/>
+        <response
+            reset="true"
+            answer="Ok never mind"
+            action="ActionStopRecurrentQuestions">
+            <slots>
+                <slot name="consent" value="no"/>
+            </slots>
+        </response>
+    </transition>
+
+
+
+
+
+
+
+    <transition src="0" dest="100">
+        <class name="event" event="EventClassifyActivityShort"/>
+        <response
+            reset="true"
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer="What are you doing right now?">
+            <slots>
+                <slot name="what"/>
+            </slots>
+        </response>
+    </transition>
+
+
+    <transition src="100" dest="101">
+        <class name="anyMessage"/>
+        <response
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer="Why? What is your purpose?"
+            reset="false">
+            <slots>
+                <slot name="what" value="@prompt"/>
+            </slots>
+        </response>
+    </transition>
+
+
+    <transition src="101" dest="102">
+        <class name="anyMessage"/>
+        <response
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer="How important is it?"
+            reset="false">
+            <slots>
+                <slot name="why" value="@prompt"/>
+            </slots>
+        </response>
+    </transition>
+
+
+
+    <transition src="102" dest="103">
+        <class name="anyMessage"/>
+        <response
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer="How fun?"
+            reset="false">
+            <slots>
+                <slot name="importance" value="@prompt"/>
+            </slots>
+        </response>
+    </transition>
+
+    <transition src="103" dest="104">
+        <class name="anyMessage"/>
+        <response
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer="How are you doing it?"
+            reset="false">
+            <slots>
+                <slot name="fun" value="@prompt"/>
+            </slots>
+        </response>
+    </transition>
+
+    <transition src="104" dest="105">
+        <class name="anyMessage"/>
+        <response
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer="Are you doing it with someone?"
+            reset="false">
+            <slots>
+                <slot name="how" value="@prompt"/>
+            </slots>
+        </response>
+    </transition>
+
+    <transition src="105" dest="0">
+        <class name="anyMessage"/>
+        <response
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer=""
+            reset="false">
+            <slots>
+                <slot name="participant" value="@prompt"/>
+            </slots>
+        </response>
+    </transition>
+
+
+
+
+
+
+
+
+
+    <transition src="2" dest="200">
+        <class name="event" event="EventClassifyActivityShort"/>
+        <response
+            reset="true"
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer="What are you doing right now?">
+            <slots>
+                <slot name="what"/>
+            </slots>
+        </response>
+    </transition>
+
+    <transition src="200" dest="201">
+        <class name="anyMessage"/>
+        <response
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer="Why? What is your purpose?"
+            reset="false">
+            <slots>
+                <slot name="what" value="@prompt"/>
+            </slots>
+        </response>
+    </transition>
+
+
+    <transition src="201" dest="202">
+        <class name="anyMessage"/>
+        <response
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer="How important is it?"
+            reset="false">
+            <slots>
+                <slot name="why" value="@prompt"/>
+            </slots>
+        </response>
+    </transition>
+
+
+
+    <transition src="202" dest="203">
+        <class name="anyMessage"/>
+        <response
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer="How fun?"
+            reset="false">
+            <slots>
+                <slot name="importance" value="@prompt"/>
+            </slots>
+        </response>
+    </transition>
+
+    <transition src="203" dest="204">
+        <class name="anyMessage"/>
+        <response
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer="How are you doing it?"
+            reset="false">
+            <slots>
+                <slot name="fun" value="@prompt"/>
+            </slots>
+        </response>
+    </transition>
+
+    <transition src="204" dest="205">
+        <class name="anyMessage"/>
+        <response
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer="Are you doing it with someone?"
+            reset="false">
+            <slots>
+                <slot name="how" value="@prompt"/>
+            </slots>
+        </response>
+    </transition>
+
+    <transition src="205" dest="2">
+        <class name="anyMessage"/>
+        <response
+            intent="ActionClassifyActivityShort"
+            action="ActionClassifyActivityShort"
+            answer=""
+            reset="false">
+            <slots>
+                <slot name="participant" value="@prompt"/>
+            </slots>
+        </response>
+    </transition>
+
+</dialogue>

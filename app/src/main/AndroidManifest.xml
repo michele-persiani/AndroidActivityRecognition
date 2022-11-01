@@ -50,9 +50,10 @@
         </activity>
 
         <activity
-            android:name=".activities.PreferenceActivity"
+            android:name=".activities.preferences.PreferencesActivity"
             android:exported="true"
-            android:label="@string/preferences_activity_name"/>
+            android:label="@string/activity_preferences_name"/>
+
         <activity
             android:name=".activities.SensorsActivity"
             android:exported="true" />
@@ -60,15 +61,24 @@
 
         <activity
             android:name=".activities.ChatbotActivity"
-            android:label="@string/chatbot_activity_name"
-            android:exported="true" >
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
-        </activity>
+            android:label="@string/activity_chatbot_name"
+            android:exported="true" />
 
 
+        <activity
+            android:name=".activities.preferences.VoicePickerActivity"
+            android:label="@string/activity_voice_pick_name"
+            android:exported="true" />
+
+        <activity
+            android:name=".activities.preferences.QuestionsListActivity"
+            android:label="@string/activity_questions_list_name"
+            android:exported="true" />
+
+        <activity
+            android:name=".activities.preferences.AudioRMSActivity"
+            android:label="@string/activity_rms"
+            android:exported="true" />
 
         <!-- Services -->
         <service
@@ -78,13 +88,13 @@
             android:stopWithTask="false" />
 
         <service
-            android:name=".services.chatbot.DialogflowService"
+            android:name=".services.recordings.ClassificationService"
             android:enabled="true"
             android:exported="true"
             android:stopWithTask="false" />
 
         <service
-            android:name=".services.chatbot.PingChatbotService"
+            android:name=".services.chatbot.ChatbotService"
             android:enabled="true"
             android:exported="true"
             android:stopWithTask="false" />
@@ -97,6 +107,12 @@
 
         <service
             android:name=".services.speech.SpeechService"
+            android:enabled="true"
+            android:exported="true"
+            android:stopWithTask="false" />
+
+        <service
+            android:name=".services.recordings.TransferService"
             android:enabled="true"
             android:exported="true"
             android:stopWithTask="false" />
@@ -116,33 +132,10 @@
                 android:resource="@xml/watchface_wallpaper" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.preview"
-                android:resource="@drawable/watchface" />
+                android:resource="@drawable/watch_icon" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.preview_circular"
-                android:resource="@drawable/watchface" />
-
-            <intent-filter>
-                <action android:name="android.service.wallpaper.WallpaperService" />
-                <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
-            </intent-filter>
-        </service>
-        <service
-            android:name=".wear.watchfaces.SOMWatchface"
-            android:exported="true"
-            android:label="@string/som_watchface_name"
-            android:permission="android.permission.BIND_WALLPAPER">
-            <meta-data
-                android:name="android.service.wallpaper.square_mode"
-                android:value="false" />
-            <meta-data
-                android:name="android.service.wallpaper"
-                android:resource="@xml/watchface_wallpaper" />
-            <meta-data
-                android:name="com.google.android.wearable.watchface.preview"
-                android:resource="@drawable/watchface" />
-            <meta-data
-                android:name="com.google.android.wearable.watchface.preview_circular"
-                android:resource="@drawable/watchface" />
+                android:resource="@drawable/watch_icon" />
 
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService" />
@@ -179,20 +172,12 @@
             android:authorities="${applicationId}.androidx-startup"
             android:exported="false">
 
-            <meta-data  android:name="umu.software.activityrecognition.preferences.initializers.RecordingsPreferencesInitializer"
+
+            <meta-data  android:name="umu.software.activityrecognition.shared.preferences.PreferencesInitializer"
                 android:value="androidx.startup" />
 
-            <meta-data  android:name="umu.software.activityrecognition.preferences.initializers.ChatbotPreferencesInitializer"
-                android:value="androidx.startup" />
-
-            <meta-data  android:name="umu.software.activityrecognition.preferences.initializers.PingEventPreferencesInitializer"
-                android:value="androidx.startup" />
-
-            <meta-data  android:name="umu.software.activityrecognition.preferences.initializers.TranslationPreferencesInitializer"
-                android:value="androidx.startup" />
-
-            <meta-data  android:name="umu.software.activityrecognition.preferences.initializers.SpeechPreferencesInitializer"
-                android:value="androidx.startup" />
+            <meta-data  android:name="umu.software.activityrecognition.speech.SpeechIOInitializer"
+                        android:value="androidx.startup" />
         </provider>
 
 

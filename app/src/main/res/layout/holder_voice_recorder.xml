@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical"
+              android:paddingVertical="@dimen/list_entry_padding_vertical"
+              android:paddingHorizontal="@dimen/list_entry_padding_horizontal">
+
+    <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+        <LinearLayout
+                android:id="@+id/linearLayout_rms"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                style="@style/Theme.PrimaryTheme.MenuHeader">
+
+            <TextView
+                    android:id="@+id/textView_rms"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    style="@style/Theme.PrimaryTheme.MenuHeaderText"
+                    android:gravity="center"
+                    android:text="100"
+                    android:textSize="100sp"/>
+        </LinearLayout>
+    </RelativeLayout>
+
+    <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+        <LinearLayout
+                android:id="@+id/linearLayout_option"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                style="@style/Theme.PrimaryTheme.MenuElement">
+
+
+            <TextView
+                    android:id="@+id/textView_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Theme.PrimaryTheme.MenuElementText"
+                    android:text="Text"/>
+
+            <TextView
+                    android:id="@+id/textView_summary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Theme.PrimaryTheme.MenuElementText"
+                    android:textSize="@dimen/text_size_tiny"
+                    android:textStyle="normal"
+                    android:text="Text"/>
+
+            <SeekBar
+                    android:id="@+id/seekBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:tooltipText="asd"
+                    android:padding="5dp"
+                    android:min="0"
+                    android:max="100"
+                    />
+
+        </LinearLayout>
+    </RelativeLayout>
+
+</LinearLayout>

@@ -15,7 +15,7 @@ public class Operators
      * @param values the values to subtract from the columns
      * @return transformed dataframe
      */
-    public static DataFrame subtractColumnsValues(DataFrame df, DataFrame.Row values)
+    public static DataFrame subtractValuesRowWise(DataFrame df, DataFrame.Row values)
     {
         return df.transformByColumn((col, serie) -> {
             if (!values.containsKey(col) || values.get(col) == null)
@@ -36,7 +36,7 @@ public class Operators
      * @param values the values to divide the column with
      * @return transformed dataframe
      */
-    public static DataFrame divideColumnsValues(DataFrame df, DataFrame.Row values)
+    public static DataFrame divideByValuesRowWise(DataFrame df, DataFrame.Row values)
     {
         return df.transformByColumn((col, serie) -> {
             if (!values.containsKey(col) || values.get(col) == null)
@@ -56,7 +56,7 @@ public class Operators
      * @param df input dataframe
      * @return transformed dataframe
      */
-    public static DataFrame subtractMean(DataFrame df)
+    public static DataFrame subtractMeanColumnWise(DataFrame df)
     {
         return df.transformByColumn((col, serie) -> {
             double mean = serie.mean();
@@ -76,7 +76,7 @@ public class Operators
      * @param df input dataframe
      * @return transformed dataframe
      */
-    public static DataFrame divideByStd(DataFrame df)
+    public static DataFrame divideByStdColumnWise(DataFrame df)
     {
         return df.transformByColumn((col, serie) -> {
             double std = serie.std();
@@ -95,10 +95,10 @@ public class Operators
      * @param df input dataframe
      * @return transformed dataframe
      */
-    public static DataFrame zscore(DataFrame df)
+    public static DataFrame zscoreColumnWise(DataFrame df)
     {
-        return Operators.divideByStd(
-                Operators.subtractMean(df)
+        return Operators.divideByStdColumnWise(
+                Operators.subtractMeanColumnWise(df)
         );
     }
 
@@ -110,16 +110,16 @@ public class Operators
      * @param stdDeviations std deviation
      * @return transformed dataframe
      */
-    public static DataFrame zscore(DataFrame df, DataFrame.Row meanValues, DataFrame.Row stdDeviations)
+    public static DataFrame zscoreColumnWise(DataFrame df, DataFrame.Row meanValues, DataFrame.Row stdDeviations)
     {
-        return Operators.divideColumnsValues(
-                Operators.subtractColumnsValues(df, meanValues),
+        return Operators.divideByValuesRowWise(
+                Operators.subtractValuesRowWise(df, meanValues),
                 stdDeviations
         );
     }
 
 
-    public static DataFrame zscore(DataFrame df, Function<Integer, String> colFunction, double[] meanValues, double[] stdValues)
+    public static DataFrame zscoreColumnWise(DataFrame df, Function<Integer, String> colFunction, double[] meanValues, double[] stdValues)
     {
         assert meanValues.length == stdValues.length;
         DataFrame.Row mean = new DataFrame.Row();
@@ -129,7 +129,7 @@ public class Operators
             mean.put(colFunction.apply(i), meanValues[i]);
             std.put(colFunction.apply(i), stdValues[i]);
         }
-        return Operators.zscore(df, mean, std);
+        return Operators.zscoreColumnWise(df, mean, std);
     }
 
     /**
@@ -138,7 +138,7 @@ public class Operators
      * @param df
      * @return transformed dataframe
      */
-    public static DataFrame minMaxNormalize(DataFrame df)
+    public static DataFrame minMaxNormalizeColumnWise(DataFrame df)
     {
 
         return df.transformByColumn((col, serie) -> {

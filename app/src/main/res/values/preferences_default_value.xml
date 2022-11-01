@@ -1,32 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- Common -->
+
+    <!-- Folder name of the application. It is a subfolder of external documents. For example obtained as:
+    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS) -->
+    <string name="application_documents_folder">ActivityRecognition</string>
+
+    <!-- Subfolders inside the application's main folder -->
+    <string name="application_recordings_folder">Recordings</string>
+    <string name="application_labels_folder">Labels</string>
+
     <!-- Recordings -->
     <bool name="recordings_default_use_wake_lock">true</bool>
-    <bool name="recordings_default_record_models">true</bool>
+    <bool name="recordings_default_record_models">false</bool>
     <integer name="recordings_default_sensors_delay_millis">50</integer>
     <integer name="recordings_default_models_delay_millis">2000</integer>
     <integer name="recordings_default_save_interval_minutes">10</integer>
 
+
     <!-- Speech -->
 
+    <string  name="speech_default_language">en-US</string>
     <integer name="speech_default_voice_speed">100</integer>
-    <string name="speech_default_language">en-US</string>
     <integer name="speech_default_max_recognized_results">1</integer>
+    <integer name="speech_default_min_silence_secs">3</integer>
+    <integer name="speech_default_silence_db_threshold">45</integer>
+    <integer name="speech_default_max_length_secs">30</integer>
+    <integer name="speech_default_on_speech_vibration_length_millis">15</integer>
 
 
 
-    <!-- Ping event -->
-    <string name="ping_event_default_event_name">EventClassifyActivityShort</string>
+    <string name="classify_questions_default_language">en-US</string>
+
+    <string-array name="classify_questions_default_questions">
+        <item>What are you doing?</item>
+        <item>Why? What is your purpose?</item>
+        <item>How important is it?</item>
+        <item>How fun?</item>
+        <item>How are you doing it?</item>
+        <item>Are you doing it with someone?</item>
+    </string-array>
+
+
+    <!-- Recurrent classifications -->
     <bool name="ping_event_default_send_ping">true</bool>
     <integer name="ping_event_default_ping_minutes">10</integer>
+
 
     <!-- Translator -->
     <string-array name="translator_default_source_languages">
         <item>en-US</item>
         <item>sv-SE</item>
-        <item>it-IT</item>
     </string-array>
     <string-array name="translator_default_target_languages">
         <item>en-US</item>
     </string-array>
+
+
+
+    <!-- Vibration -->
+
+    <bool name="default_enable_vibration">true</bool>
+
 </resources>

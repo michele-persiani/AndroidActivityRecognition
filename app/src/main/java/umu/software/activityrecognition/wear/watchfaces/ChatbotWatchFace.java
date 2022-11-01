@@ -1,6 +1,5 @@
 package umu.software.activityrecognition.wear.watchfaces;
 
-import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Rect;
@@ -44,9 +43,9 @@ public class ChatbotWatchFace extends CanvasWatchFaceService
     {
         super.onCreate();
         mActivity = ActivityRecognition.getInstance(this);
-        mActivity.startChatbot();
+        mActivity.onCreate();
         mActivity.startRecordService();
-        mActivity.askStartRecurrentQuestions();
+        mActivity.startRecurrentQuestions();
 
         mWakeLock = AndroidUtils.getWakeLock(this, PowerManager.FULL_WAKE_LOCK);
         mWakeLock.acquire();
@@ -58,9 +57,7 @@ public class ChatbotWatchFace extends CanvasWatchFaceService
     public void onDestroy()
     {
         super.onDestroy();
-        mActivity.stopRecordService();
-        mActivity.stopRecurrentQuestions();
-        mActivity.shutdownChatbot();
+        mActivity.onDestroy();
         mWakeLock.release();
         releaseInternet();
     }
@@ -104,7 +101,6 @@ public class ChatbotWatchFace extends CanvasWatchFaceService
 
     private static class TapDetector
     {
-
         public static final int SINGLE_TAP = 0;
         public static final int DOUBLE_TAP = 1;
 
@@ -126,6 +122,7 @@ public class ChatbotWatchFace extends CanvasWatchFaceService
         {
             mListener = tapListener;
         }
+
 
         public void onTap()
         {
@@ -160,7 +157,7 @@ public class ChatbotWatchFace extends CanvasWatchFaceService
 
     private class Engine extends CanvasWatchFaceService.Engine
     {
-        private static final long INVALIDATE_MILLIS = 700;
+        private static final long INVALIDATE_MILLIS = 250;
         private final Handler mHandler = AndroidUtils.newHandler();
         private PainterChooser mPainterChooser;
 
@@ -187,13 +184,13 @@ public class ChatbotWatchFace extends CanvasWatchFaceService
                 switch (tapType)
                 {
                     case TapDetector.SINGLE_TAP:
-                        mActivity.sendClassifyEvent();
+                        mActivity.classifyActivity();
                         break;
                     case TapDetector.DOUBLE_TAP:
-                        if (!mActivity.isAskingQuestions())
-                            mActivity.askStartRecurrentQuestions();
+                        if (!mActivity.isPingingQuestions())
+                            mActivity.startRecurrentQuestions();
                         else
-                            mActivity.askStopRecurrentQuestions();
+                            mActivity.stopRecurrentQuestions();
                         break;
                 }
             });
@@ -223,7 +220,7 @@ public class ChatbotWatchFace extends CanvasWatchFaceService
         public void onDraw(Canvas canvas, Rect bounds)
         {
             super.onDraw(canvas, bounds);
-            mPainterChooser.setPainter(mActivity.isChatbotBusy()? 1 : 0);
+            mPainterChooser.setPainter(mActivity.isAskingQuestions()? 1 : 0);
             mPainterChooser.getDest().set(bounds);
             mPainterChooser.accept(canvas);
             //Bitmap image = getChatbotImage();

@@ -3,10 +3,13 @@ package umu.software.activityrecognition.preferences;
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
+import android.os.Environment;
 
+import java.nio.file.Paths;
 import java.util.function.Predicate;
 
 import umu.software.activityrecognition.R;
+import umu.software.activityrecognition.shared.preferences.PreferencesInitializer;
 import umu.software.activityrecognition.shared.util.AndroidUtils;
 import umu.software.activityrecognition.shared.preferences.Preference;
 import umu.software.activityrecognition.shared.preferences.PreferencesModule;
@@ -14,6 +17,9 @@ import umu.software.activityrecognition.tflite.TFLiteNamedModels;
 
 public class RecordServicePreferences extends PreferencesModule
 {
+    static {
+        PreferencesInitializer.addInitialization(RecordServicePreferences.class);
+    }
 
     public RecordServicePreferences(Context context)
     {
@@ -34,6 +40,14 @@ public class RecordServicePreferences extends PreferencesModule
         );
         modelsReadingsDelayMillis().init(
                 getResources().getInteger(R.integer.recordings_default_models_delay_millis)
+        );
+
+        saveFolderPath().init(
+                Paths.get(
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).getAbsolutePath(),
+                        getResources().getString(R.string.application_documents_folder),
+                        getResources().getString(R.string.application_recordings_folder)
+                ).toString()
         );
 
         SensorManager sensorManager = AndroidUtils.getSensorManager(mContext);
@@ -66,22 +80,26 @@ public class RecordServicePreferences extends PreferencesModule
         return getInt(R.string.save_interval_minutes);
     }
 
+    public Preference<String> saveFolderPath()
+    {
+        return getString(R.string.recordings_save_folder);
+    }
 
     public Preference<Boolean> useWakeLock()
     {
-        return getBoolean(getStringFromId(R.string.recordings_use_wake_lock));
+        return getBoolean(getStringRes(R.string.recordings_use_wake_lock));
     }
 
 
     public Preference<Integer> sensorsReadingsDelayMillis()
     {
-        return getInt(getStringFromId(R.string.read_sensor_delay_millis));
+        return getInt(getStringRes(R.string.read_sensor_delay_millis));
     }
 
 
     public Preference<Integer> modelsReadingsDelayMillis()
     {
-        return getInt(getStringFromId(R.string.read_models_delay_millis));
+        return getInt(getStringRes(R.string.read_models_delay_millis));
     }
 
     public Preference<Boolean> recordSensor(Sensor sensor)

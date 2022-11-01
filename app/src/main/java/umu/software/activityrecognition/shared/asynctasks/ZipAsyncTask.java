@@ -8,9 +8,16 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+
+/**
+ * AsyncTask to zip files
+ * @param <T>
+ */
 public abstract class ZipAsyncTask<T> extends AsyncTask<T, Boolean, Integer>
 {
 
@@ -24,17 +31,31 @@ public abstract class ZipAsyncTask<T> extends AsyncTask<T, Boolean, Integer>
 
     protected abstract String getInputFilePath(T input);
 
+    /**
+     * Returns whether the given input should be processed
+     * @param input input to test
+     * @return whether the given input should be processed
+     */
     protected boolean filterInput(T input)
     {
         return true;
     }
 
+    /**
+     * Returns the file name of resulting zip
+     * @return the file name of resulting zip
+     */
     protected abstract String getOutputFileName();
 
+    /**
+     * Returns whether this asynctask should execute
+     * @return whether this asynctask should execute
+     */
     protected boolean checkConditions()
     {
         return true;
     }
+
 
     public boolean processFile(ZipOutputStream out, String fileName)
     {
@@ -73,9 +94,12 @@ public abstract class ZipAsyncTask<T> extends AsyncTask<T, Boolean, Integer>
         }
 
         ZipOutputStream out;
+        String fileName = getOutputFileName();
         try {
-            out = new ZipOutputStream(new FileOutputStream(getOutputFileName()));
-        } catch (FileNotFoundException e) {
+            Files.createDirectories(Paths.get(fileName).getParent().toAbsolutePath());
+            out = new ZipOutputStream(new FileOutputStream(fileName));
+        } catch (Exception e)
+        {
             e.printStackTrace();
             return -1;
         }
@@ -95,4 +119,6 @@ public abstract class ZipAsyncTask<T> extends AsyncTask<T, Boolean, Integer>
         }
         return result;
     }
+
+
 }

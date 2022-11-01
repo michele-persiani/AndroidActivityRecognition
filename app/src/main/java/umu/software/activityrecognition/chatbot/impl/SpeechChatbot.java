@@ -1,6 +1,7 @@
 package umu.software.activityrecognition.chatbot.impl;
 
 import android.content.Context;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
@@ -8,10 +9,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import umu.software.activityrecognition.application.ApplicationSingleton;
 import umu.software.activityrecognition.chatbot.Chatbot;
 import umu.software.activityrecognition.chatbot.ChatbotResponse;
 import umu.software.activityrecognition.services.speech.SpeechService;
 import umu.software.activityrecognition.shared.services.ServiceConnectionHandler;
+import umu.software.activityrecognition.shared.util.AndroidUtils;
 import umu.software.activityrecognition.shared.util.LogHelper;
 
 
@@ -20,6 +23,7 @@ import umu.software.activityrecognition.shared.util.LogHelper;
  */
 public class SpeechChatbot implements Chatbot
 {
+
     private final LogHelper log = LogHelper.newClassTag(this);
 
     private final Chatbot wrapped;
@@ -101,7 +105,7 @@ public class SpeechChatbot implements Chatbot
      */
     public boolean isBusy()
     {
-        return speechConnection.applyBoundFunction(SpeechService.SpeechBinder::isBusy, false) || isWaitingAnswer();
+        return isWaitingAnswer() || speechConnection.applyBoundFunction(SpeechService.SpeechBinder::isBusy, false);
     }
 
     /**
@@ -187,8 +191,9 @@ public class SpeechChatbot implements Chatbot
                     log.e("TTS error");
                     cbkResponse.accept(ChatbotResponse.forError("TTS error"));
                 }
-                else if (isAutoListening() && isConnected())
+                else if (isAutoListening() && isConnected()) {
                     startListening(cbkResponse);
+                }
             });
         });
     }

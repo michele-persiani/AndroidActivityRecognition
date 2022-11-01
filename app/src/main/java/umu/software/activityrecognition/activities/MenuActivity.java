@@ -4,8 +4,10 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 
+import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -17,14 +19,15 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import umu.software.activityrecognition.R;
+import umu.software.activityrecognition.activities.shared.ListViewActivity;
+import umu.software.activityrecognition.activities.shared.MultiItemListViewActivity;
 
 
 /**
  * Activity that displays a simple menu as a list of buttons
  */
-public abstract class MenuActivity extends ListViewActivity
+public abstract class MenuActivity extends MultiItemListViewActivity
 {
-    private static final int BUTTON_ID = 12005;
     private boolean mBuilt = false;
 
     private final List<Consumer<ListViewActivity.ViewHolder>> mBuilders = Lists.newArrayList();
@@ -33,71 +36,65 @@ public abstract class MenuActivity extends ListViewActivity
     protected void onCreate(@Nullable Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.view_listview);
-        buildMenu();
-        mBuilt = true;
-        RecyclerView recyclerView = findViewById(R.id.listview);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.setAdapter(new MenuActivity.Adapter());
         getSupportActionBar().hide();
+        refreshListView();
     }
 
     @Override
-    protected View createListEntryView()
+    protected int getMasterLayout()
     {
-        LinearLayout layout = new LinearLayout(this);
-        LinearLayout.LayoutParams attributLayoutParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        layout.setLayoutParams(attributLayoutParams);
-        layout.setPadding(0, 5, 0, 5);
-        layout.setGravity(Gravity.CENTER);
-        Button btn = makeButton();
-        btn.setId(BUTTON_ID);
-        layout.addView(btn);
-        return layout;
+        return R.layout.holder_main_menu;
     }
 
-    /**
-     * Builds a button of the menu. Can set color, font, etc
-     */
-    protected Button makeButton()
-    {
-        return new Button(this);
-    }
 
 
     protected int getItemCount()
     {
-        return mBuilders.size();
+        return mBuilders.size() + 1;
+    }
+
+
+
+
+    /**
+     * Add an entry to the menu.
+     * @param position index at which insterting the element
+     * @param name the text of the button
+     * @param buttonListener the listener
+     */
+    protected void addMenuEntry(int position, String name, View.OnClickListener buttonListener)
+    {
+        if (mBuilt)
+            throw new IllegalStateException("addMenuEntry() must be called inside buildmenu()");
+        mBuilders.add(position, (holder) -> {
+            Button entryButton = holder.getView().findViewById(R.id.button_entry);
+            entryButton.setText(name);
+            entryButton.setOnClickListener(buttonListener);
+        });
+    }
+
+
+    protected void addMenuEntry(String name, View.OnClickListener buttonListener)
+    {
+        addMenuEntry(mBuilders.size(), name, buttonListener);
     }
 
 
     @Override
-    protected void bindElementView(@NonNull ListViewActivity.ViewHolder holder, int position)
+    protected void registerBinders()
     {
-        mBuilders.get(position).accept(holder);
-    }
+        mBuilders.clear();
+        mBuilt = false;
+        buildMenu();
+        registerBinding(0, R.id.linearLayout_header, ((viewHolder, integer) -> {
+            TextView textView = viewHolder.getView().findViewById(R.id.textView_header);
+            textView.setText("Menu");
+        }));
 
-    /**
-     * Add an entry to the menu. Can only be used inside buildMenu()
-     * @param name the text of the button
-     * @param buttonListener the listener
-     */
-    protected void addMenuEntry(String name, View.OnClickListener buttonListener)
-    {
-        if (mBuilt)
-            return;
-        mBuilders.add((holder) -> {
-            Button btn = holder.getView().findViewById(BUTTON_ID);
-            btn.setText(name);
-            btn.setOnClickListener(buttonListener);
+        registerDefaultBinding(R.id.linearLayout_entry, (holder, position) -> {
+            mBuilders.get(position - 1).accept(holder);
         });
-    }
-
-    protected void addMenuEntry(int stringResId, View.OnClickListener buttonListener)
-    {
-        addMenuEntry(getString(stringResId), buttonListener);
+        mBuilt = true;
     }
 
 

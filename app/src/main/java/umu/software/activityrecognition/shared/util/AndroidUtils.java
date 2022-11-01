@@ -203,6 +203,8 @@ public class AndroidUtils
         return result.toString();
     }
 
+
+
     /* Various */
 
     public static long measureElapsedTime(Runnable run)
@@ -213,13 +215,5 @@ public class AndroidUtils
         return time;
     }
 
-    public static void vibrate(Context context, long milliseconds)
-    {
-        AndroidUtils.getVibrator(context).vibrate(
-                VibrationEffect.createOneShot(
-                        milliseconds,
-                        VibrationEffect.DEFAULT_AMPLITUDE)
-        );
-    }
 
 }

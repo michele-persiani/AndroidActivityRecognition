@@ -1,16 +1,20 @@
 <resources>
     <string name="app_name">Activity Recognition</string>
-    <string name="chatbot_activity_name">Chatbot</string>
-    <string name="preferences_activity_name">Preferences</string>
+    <string name="activity_chatbot_name">Assistant</string>
+    <string name="activity_preferences_name">Preferences</string>
+    <string name="activity_voice_pick_name">Voice Pick</string>
+    <string name="activity_questions_list_name">Questions List</string>
+    <string name="activity_rms">Audio Loudness</string>
 
     <string name="activity_recognition_watchface_name">Activity Recognition</string>
     <string name="som_watchface_name">Self Organizing Map</string>
-    <string name="chatbot_watchface_name">Chatbot</string>
+    <string name="chatbot_watchface_name">Assistant</string>
 
 
     <!-- Notification -->
     <string name="notification_group_id">umu.software.activityrecognition.NOTIFICATION_GROUP_ID</string>
     <string name="notification_channel_id">Activity Recognition</string>
+    <string name="notification_transfer_title">Copying files…</string>
 
     <!-- RecordService notification text -->
     <string name="recording_notification_title">Sensor recordings</string>
@@ -18,8 +22,9 @@
 
 
     <!-- SpeechService notification text -->
-    <string name="speech_notification_title">Voice recognition</string>
+    <string name="speech_notification_title">Speech recognition</string>
     <string name="speech_notification_text">Tap to say something.</string>
+
 
 
 
@@ -30,11 +35,12 @@
     <string name="read_sensor_delay_millis">read_sensor_delay_millis</string>
     <string name="read_models_delay_millis">read_models_delay_millis</string>
     <string name="recordings_use_wake_lock">recordings_use_wake_lock</string>
+    <string name="recordings_save_folder">recordings_save_folder</string>
 
 
     <string name="dialogflow_api_key">dialogflow_api_key</string>
-    <string name="chatbot_send_recurrent_event">chatbot_send_recurrent_event</string>
-    <string name="chatbot_recurrent_event_minutes">chatbot_recurrent_event_minutes</string>
+    <string name="ping_event_send_recurrent_event">chatbot_send_recurrent_event</string>
+    <string name="ping_event_recurrent_event_minutes">chatbot_recurrent_event_minutes</string>
     <string name="chatbot_recurrent_event_name">chatbot_recurrent_event_name</string>
 
 
@@ -43,10 +49,23 @@
     <string name="speech_voice_speed">speech_voice_speed</string>
     <string name="speech_voice_name">speech_voice_name</string>
     <string name="speech_max_recognized_results">speech_max_recognized_results</string>
+    <string name="speech_silence_db_threshold">speech_silence_db_threshold</string>
+    <string name="speech_min_silence_secs">speech_min_silence_secs</string>
+    <string name="speech_max_length_secs">speech_max_length_secs</string>
+    <string name="speech_on_speech_vibration_length_millis">speech_on_speech_vibration_length_millis</string>
+    <string name="speech_on_speech_vibration_min_db_delta">speech_on_speech_vibration_min_db_delta</string>
 
+    <string name="classify_zip_destination_folder">classify_zip_destination_folder</string>
+    <string name="classify_questions_language">classify_questions_language</string>
+    <string name="classify_questions_questions">classify_questions_questions</string>
 
     <string name="translator_source_languages">translation_source_languages</string>
     <string name="translator_target_languages">translation_target_languages</string>
+
+
+
+    <!-- Vibration -->
+    <string name="enable_vibration">enable_vibration</string>
 
 
     <!-- Preferences fragment strings -->
@@ -68,19 +87,44 @@
     <string name="recordings_use_wake_lock_title">Use wake lock</string>
     <string name="recordings_use_wake_lock_summary">Keep the device\'s CPU active while recording</string>
 
-    <string name="category_chatbot">Chatbot</string>
+    <string name="category_chatbot">Assistant\'s voice</string>
 
     <string name="chatbot_language_title">Language</string>
-    <string name="chatbot_language_summary">Select the chatbot\'s language</string>
+    <string name="chatbot_language_summary">Select the assistant\'s language</string>
+    <string name="speech_voice_name_title">Voice</string>
+    <string name="speech_voice_name_summary">Select a voice for the current language</string>
     <string name="chatbot_voice_speed_title">Voice speed</string>
-    <string name="chatbot_voice_speed_summary">Select the chatbot\'s voice speed</string>
-    <string name="chatbot_send_recurrent_event_key">Autonomously ask questions</string>
-    <string name="chatbot_send_recurrent_event_summary">Whether the chatbot should ask you question when it is active</string>
-    <string name="chatbot_recurrent_event_minutes_key">Questions intervals</string>
+    <string name="chatbot_voice_speed_summary">Select the assistant\'s voice speed</string>
+    <string name="chatbot_send_recurrent_event_title">Autonomously ask questions</string>
+    <string name="chatbot_send_recurrent_event_summary">Whether the assistant should ask you question while active</string>
+    <string name="chatbot_recurrent_event_minutes_title">Questions intervals</string>
     <string name="chatbot_recurrent_event_minutes_summary">Time interval between a set of questions and the other (minutes)</string>
-    <string name="chatbot_recurrent_event_name_key">Questions event name</string>
+    <string name="chatbot_recurrent_event_name_title">Questions event name</string>
     <string name="chatbot_recurrent_event_name_summary">Name of the event that will be sent to Dialogflow to request questions (do not change)</string>
 
+
+    <string name="speech_min_silence_secs_title">Minimum silence length</string>
+    <string name="speech_min_silence_secs_summary">Minimum length of silence waited before recognizing a speech (seconds)</string>
+    <string name="speech_max_length_secs_title">Maximum voice recordings length</string>
+    <string name="speech_max_length_secs_summary">Maximum length of voice recordings while classifying activities (seconds)</string>
+    <string name="speech_silence_db_threshold_title">Silence threshold</string>
+    <string name="speech_silence_db_threshold_summary">Threshold below which sound is recognized as silence (dB)</string>
+    <string name="speech_show_db_title">Audio Recorder</string>
+    <string name="speech_show_db_summary">Go to the audio recorder settings</string>
+    <string name="speech_on_speech_vibration_length_title">On voice vibration</string>
+    <string name="speech_on_speech_vibration_length_summary">Sets the device\'s vibration length while you\'re speaking (milliseconds)</string>
+    <string name="speech_on_speech_vibration_min_db_title">Voice Loudness</string>
+    <string name="speech_on_speech_vibration_min_db_summary">Sets how loud speech should be to make the device vibrate while talking (dB)</string>
+
+    <string name="category_classification">Activity classification</string>
+
+    <string name="classify_questions_title">Questions</string>
+    <string name="classify_questions_summary">Select which questions will be asked when classifying the activity</string>
+
+    <string name="category_miscellaneous">Miscellaneous</string>
+
+    <string name="enable_vibration_title">Vibration</string>
+    <string name="enable_vibration_summary">Enable vibration</string>
 
 
 
@@ -88,6 +132,33 @@
     <string name="close">Close</string>
     <string name="stop">Stop</string>
     <string name="save">Save</string>
-    <string name="request_user_classification">What are you doing?</string>
+    <string name="add">Add</string>
+    <string name="remove">Remove</string>
+    <string name="select">Select</string>
+    <string name="info">Info</string>
+    <string name="okay">OK</string>
+    <string name="name">Name</string>
+    <string name="confirm">Confirm</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+
+
+
+    <!-- Views -->
+    <string name="add_question_hint">Add a new question</string>
+    <string name="voice_picker_prompt">Hello</string>
+    <string name="menu_save_sensor_recordings">Save Recordings</string>
+    <string name="menu_available_sensors">Available sensors</string>
+    <string name="menu_launch_assistant">Launch Chatbot</string>
+    <string name="menu_clear_save_folder">Clear Save Folder</string>
+    <string name="menu_show_app_folder">Show application folder</string>
+    <string name="menu_intent_open_folder_failed">There is no suitable app to do that</string>
+    <string name="menu_classify_activity">Classify activity</string>
+    <string name="menu_preferences">Preferences</string>
+    <string name="menu_start_recording">Start recording sensors</string>
+    <string name="menu_stop_recording">Stop recording sensors</string>
+    <string name="menu_alert_confirm_delete">Are you sure? This operation cannot be undone.</string>
+    <string name="menu_files_deleted_toast">Deleted %s files.</string>
+
 
 </resources>

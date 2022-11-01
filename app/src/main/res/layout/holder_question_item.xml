@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical"
+              android:paddingVertical="@dimen/list_entry_padding_vertical"
+              android:paddingHorizontal="@dimen/list_entry_padding_horizontal"
+        >
+
+
+    <RelativeLayout
+            android:id="@+id/linearLayout_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            style="@style/Theme.PrimaryTheme.MenuHeader"
+            android:gravity="center">
+
+        <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Questions"
+                style="@style/Theme.PrimaryTheme.MenuHeaderText"
+                android:textSize="@dimen/text_size_large"/>
+
+    </RelativeLayout>
+
+    <LinearLayout
+            android:id="@+id/linearLayout_show"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/Theme.PrimaryTheme.MenuElement"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+        <RelativeLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="10"
+                android:gravity="center">
+
+            <TextView
+                    android:id="@+id/textView_question"
+                    style="@style/Theme.PrimaryTheme.MenuElementText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Question text"/>
+
+        </RelativeLayout>
+
+
+        <ImageButton
+                android:id="@+id/button_remove_question"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_cc_clear" />
+
+    </LinearLayout>
+
+
+
+    <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+    <LinearLayout
+            android:id="@+id/linearLayout_add"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            style="@style/Theme.PrimaryTheme.MenuElement"
+            android:gravity="center">
+
+        <EditText
+                android:id="@+id/editText_new_question"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="@dimen/text_size_small"
+                android:hint="@string/add_question_hint"/>
+
+        <ImageButton
+                android:id="@+id/button_add_question"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_add_white_24dp" />
+
+    </LinearLayout>
+    </RelativeLayout>
+</LinearLayout>

@@ -17,7 +17,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
-import umu.software.activityrecognition.shared.util.Exceptions;
 
 
 
@@ -140,8 +139,15 @@ public class MLKitTranslator implements Closeable, ITranslator
         if (translator == null)
             createTranslator();
 
-        if (!Exceptions.runCatch(downloadedLatch::await))
+        try
+        {
+            downloadedLatch.await();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
             return null;
+        }
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -151,8 +157,16 @@ public class MLKitTranslator implements Closeable, ITranslator
                 result -> latch.countDown()
         );
 
-        if (!Exceptions.runCatch(latch::await))
+        try
+        {
+            latch.await();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
             return null;
+        }
+
 
         return translateTask.getResult();
     }

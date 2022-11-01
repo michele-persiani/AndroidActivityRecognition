@@ -25,13 +25,12 @@ import java.util.function.Function;
 
 import umu.software.activityrecognition.shared.util.AndroidUtils;
 import umu.software.activityrecognition.data.dataframe.DataFrame;
-import umu.software.activityrecognition.tflite.TFLiteNamedModels;
-import umu.software.activityrecognition.tflite.model.AccumulatorTFModel;
+import umu.software.activityrecognition.tflite.model.DataTFModel;
 
 public class SOMWatchface extends CanvasWatchFaceService
 {
     Engine mEngine = null;
-    AccumulatorTFModel mModel;
+    DataTFModel mModel;
     private PowerManager.WakeLock mWakeLock;
     private long mPredictionTime = 0L;
 
@@ -42,10 +41,7 @@ public class SOMWatchface extends CanvasWatchFaceService
         mWakeLock = AndroidUtils.getWakeLock(this, PowerManager.PARTIAL_WAKE_LOCK);
         mWakeLock.acquire(10*60*1000L /*10 minutes*/);
 
-        mModel = TFLiteNamedModels.SOM.newInstance(this);
-        mModel.getLifecycle().handleLifecycleEvent(Lifecycle.Event.ON_CREATE);
-        mModel.getLifecycle().handleLifecycleEvent(Lifecycle.Event.ON_START);
-
+        mModel.startDataSupply();
     }
 
 
@@ -54,8 +50,7 @@ public class SOMWatchface extends CanvasWatchFaceService
     {
         super.onDestroy();
         mWakeLock.release();
-        mModel.getLifecycle().handleLifecycleEvent(Lifecycle.Event.ON_STOP);
-        mModel.getLifecycle().handleLifecycleEvent(Lifecycle.Event.ON_DESTROY);
+        mModel.stopDataSupply();
     }
 
     @Override

@@ -1,12 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <resources>
     <color name="silver">#C0C0C0</color>
+    <color name="colorPrimary">@color/silver</color>
+    <color name="colorAccent">@color/blue_a400</color>
+
 
     <style name="Theme.PrimaryTheme" parent="Theme.MaterialComponents">
-        <item name="colorPrimary">@color/silver</item>
-        <item name="colorAccent">@color/blue_a400</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <style name="Theme.PrimaryTheme.MenuHeader" parent="Theme.PrimaryTheme">
+        <item name="android:minHeight">70dp</item>
+        <item name="android:paddingVertical">15dp</item>
+        <item name="android:paddingHorizontal">8dp</item>
+    </style>
+
+
+    <style name="Theme.PrimaryTheme.MenuHeaderText" parent="Theme.PrimaryTheme">
+        <item name="android:textSize">@dimen/text_size_large</item>
+        <item name="android:textColor">@color/colorPrimary</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+
+
+    <style name="Theme.PrimaryTheme.MenuElement" parent="Theme.PrimaryTheme">
+        <item name="android:background">@drawable/border</item>
+        <item name="android:minHeight">70dp</item>
+        <item name="android:paddingVertical">15dp</item>
+        <item name="android:paddingHorizontal">8dp</item>
+    </style>
+
+
+    <style name="Theme.PrimaryTheme.MenuElementText" parent="Theme.PrimaryTheme">
+        <item name="android:textSize">@dimen/text_size_small</item>
+        <item name="android:textColor">@color/black</item>
+        <item name="android:textStyle">bold</item>
+    </style>
 
 
 </resources>

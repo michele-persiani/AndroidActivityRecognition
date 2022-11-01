@@ -8,10 +8,12 @@ import android.os.Build;
 
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.util.function.Consumer;
 
 import umu.software.activityrecognition.data.dataframe.RowParcelable;
+import umu.software.activityrecognition.shared.services.ServiceBinder;
 import umu.software.activityrecognition.shared.services.ServiceConnectionHandler;
 
 
@@ -68,9 +70,9 @@ public class RecordServiceHelper
      * Bind RecordService service with the given ServiceConnection
      * @return whether the service got bound
      */
-    public ServiceConnectionHandler<RecordService.Binder> bind()
+    public ServiceConnectionHandler<ServiceBinder<RecordService>> bind()
     {
-        return new ServiceConnectionHandler<RecordService.Binder>(mContext).bind(RecordService.class);
+        return new ServiceConnectionHandler<ServiceBinder<RecordService>>(mContext).bind(RecordService.class);
     }
 
     /**
@@ -133,57 +135,6 @@ public class RecordServiceHelper
 
 
 
-    /**
-     * Adds an accumulator to those being managed
-     * @param accumulatorId the id of the added broadcast receiver
-     * @param callback callback notified on whether the receiver was successfully registered
-     */
-    public void setupBroadcastReceiver(String accumulatorId, @Nullable Consumer<Boolean> callback)
-    {
-        ServiceConnectionHandler<RecordService.Binder> conn = new ServiceConnectionHandler<>(mContext);
-        conn.bind(RecordService.class)
-                .enqueue(binder -> {
-                    boolean success = binder.getService().setupBroadcastReceiver(accumulatorId);
-                    if (callback != null)
-                        callback.accept(success);
-                })
-                .enqueueUnbind();
-    }
 
-
-    /**
-     * Removes an accumulator from those being managed
-     * @param accumulatorId the id of the broadcast receiver to remove
-     */
-    public void removeBroadcastReceiver(String accumulatorId, @Nullable Consumer<Boolean> callback)
-    {
-        ServiceConnectionHandler<RecordService.Binder> conn = new ServiceConnectionHandler<>(mContext);
-        conn.bind(RecordService.class)
-                .enqueue(binder -> {
-                    boolean success = binder.getService().removeBroadcastReceiver(accumulatorId);
-                    if (callback != null)
-                        callback.accept(success);
-                })
-                .enqueueUnbind();
-    }
-
-    /**
-     * Sends an event to the accumulator with the given accumulatorId. The accumulator must have been
-     * added before through setupBroadcastReceiver()
-     * @param accumulatorId the id of the accumulator to sent the event to
-     * @param eventBuilder builder to construct the event to send
-     */
-    public void recordEvent(String accumulatorId, Consumer<RowParcelable> eventBuilder)
-    {
-        RowParcelable event = new RowParcelable();
-        eventBuilder.accept(event);
-
-        Intent intent = new Intent(mContext, RecordService.class);
-        intent.setAction(RecordService.ACTION_RECORD_EVENT);
-        intent.putExtra(RecordService.EXTRA_ACCUMULATOR_ID, accumulatorId);
-        intent.putExtra(RecordService.EXTRA_EVENT, event);
-
-        mContext.sendBroadcast(intent);
-    }
 
 }

@@ -157,6 +157,7 @@ public class ServiceConnectionHandler<B extends Binder> implements ServiceConnec
             fcn.accept(getBinder());
     }
 
+
     /**
      * Enqueues an unbind operation that unbinds the service after all previously enqueued operations have performed
      * @return this instance
@@ -208,5 +209,16 @@ public class ServiceConnectionHandler<B extends Binder> implements ServiceConnec
             bind(mLastBoundServiceClass);
         else
             mCallbacks.clear();
+    }
+
+
+    public static <T extends Binder> ServiceConnectionHandler<T> bind(Context context, Class<? extends Service> service)
+    {
+        return new ServiceConnectionHandler<T>(context).bind(service);
+    }
+
+    public static <T extends Binder> void execute(Context context, Class<? extends Service> service, Consumer<T> command)
+    {
+        new ServiceConnectionHandler<T>(context).bind(service).enqueue(command).enqueueUnbind();
     }
 }

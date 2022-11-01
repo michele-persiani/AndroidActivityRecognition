@@ -7,58 +7,66 @@ import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.os.Binder;
 import android.os.IBinder;
+import android.speech.RecognizerIntent;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
 import android.util.Pair;
 
 import androidx.annotation.Nullable;
 import androidx.lifecycle.DefaultLifecycleObserver;
-import androidx.startup.AppInitializer;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import umu.software.activityrecognition.R;
 import umu.software.activityrecognition.preferences.SpeechServicePreferences;
-import umu.software.activityrecognition.preferences.initializers.SpeechPreferencesInitializer;
 import umu.software.activityrecognition.shared.lifecycles.ForegroundServiceLifecycle;
 import umu.software.activityrecognition.shared.services.LifecycleService;
 import umu.software.activityrecognition.shared.services.ServiceBinder;
 import umu.software.activityrecognition.shared.services.ServiceConnectionHandler;
-import umu.software.activityrecognition.shared.util.LogHelper;
 import umu.software.activityrecognition.shared.util.UniqueId;
-import umu.software.activityrecognition.speech.ASR;
-import umu.software.activityrecognition.speech.BaseSpeechRecognitionListener;
-import umu.software.activityrecognition.speech.TTS;
+import umu.software.activityrecognition.speech.*;
 
 
 /**
  * Service to utilize Automatic-Speech-Recognition and Text-To-Speech
  *
+ * The service uses two languages: Source/target and spoken. Spoken language is the language of the speech interface
+ *  - the language that is actually listened or registered from the user. Source/target language is the
+ *  language to which spoken language is translated to.
+ *  For example spoken language could be swedish and source english when APIs are written in english but the
+ *  users speak swedish
+ *
  * Started actions:
  * - ACTION_START_LISTENING
  *      Utilized to start listening from the device's microphone
- *      EXTRA_SRC_TRG_LANGUAGE (Locale) defines the target language
+ *      EXTRA_LANGUAGE (Locale) defines the target language
  * - ACTION_SAY
  *      Utilized to say something through the device's speakers
- *      EXTRA_SRC_TRG_LANGUAGE (Locale) defines the source language
- * For any started action EXTRA_FOREGROUND can be set to start/stop foreground mode
+ *      EXTRA_LANGUAGE (Locale) defines the source language
+ * - ACTION_CONFIGURE
+ *      Configure the service
+ *      EXTRA_FOREGROUND whether to put the service in foreground
+ *      EXTRA_LANGUAGE (Locale) target language to translate the input speech to when using foreground
  *
- * Setting the foreground also utilized EXTRA_SRC_TRG_LANGUAGE to specify the target language
  *
- * Can be bound. In this case the binding intent must specify EXTRA_SRC_TRG_LANGUAGE
+ * Can be bound. In this case the binding intent must specify EXTRA_LANGUAGE to set source language
  *
- * Can be set as foreground. In this case it will broadcasts intents with action ACTION_RECOGNIZED_SPEECH
- * and extras EXTRA_UTTERANCE, EXTRA_CONFIDENCE
+ * Whenever a speech is recognized a broadcast intent with action ACTION_RECOGNIZED_SPEECH is triggered,
+ * with extras EXTRA_UTTERANCE, EXTRA_CONFIDENCE, EXTRA_LANGUAGE
  */
 public class SpeechService extends LifecycleService
 {
 
     public static class SpeechBinder extends Binder
     {
-        private final Locale mLanguage;
+        private Locale mLanguage;
         private final SpeechService mService;
+        private Voice mSelectedVoice;
+
 
         public SpeechBinder(SpeechService service, Locale language)
         {
@@ -66,25 +74,91 @@ public class SpeechService extends LifecycleService
             mLanguage = language;
         }
 
+
+        /**
+         * Sets the input language for the binder.
+         * @param locale
+         */
+        public void setSourceLanguage(Locale locale)
+        {
+            mLanguage = locale;
+        }
+
+        /**
+         * Gets this binder's input language
+         * @return this binder's input language
+         */
+        public Locale getSourceLanguage()
+        {
+            return mLanguage;
+        }
+
+
+        /**
+         * Gets the spoken language whether listened or spoken.
+         * The binder's language is translated to this language (and vice-versa) when interacting
+         * with the user.
+         * For example, binder's language could be english and spoken language swedish
+         * @return the spoken language
+         */
+        public Locale getTargetLanguage()
+        {
+            return mService.getSpokenLanguage();
+        }
+
+        /**
+         *
+         * @param callback callback receiving the listened sentence in source language
+         */
         public void startListening(@Nullable Consumer<String> callback)
         {
-            mService.startListening(mLanguage, callback);
+            mService.startListening(mLanguage, null, callback);
         }
+
 
         public void stopListening()
         {
             mService.stopListening();
         }
 
+        /**
+         * Say something
+         * @param message message in source language
+         * @param callback result callback
+         */
         public void say(String message, @Nullable Consumer<Boolean> callback)
         {
-            mService.say(message, mLanguage, callback);
+            mService.say(message, mLanguage, builder -> {
+                if (mSelectedVoice != null)
+                    builder.setVoice(mSelectedVoice);
+            }, callback);
         }
+
+
+        /**
+         * Sets the voice to use. To be used together with getAvailableVoices()
+         * @param voice selected voice
+         */
+        public void setVoice(Voice voice)
+        {
+            mSelectedVoice = voice;
+        }
+
+        /**
+         * Gets the voices available in the binder's language
+         * @return  the voices available in the binder's language
+         */
+        public List<Voice> getAvailableVoices()
+        {
+            return mService.getAvailableVoices(mService.getSpokenLanguage());
+        }
+
 
         public void setForeground(boolean foreground)
         {
             mService.setForeground(foreground, mLanguage);
         }
+
 
         public boolean isBusy()
         {
@@ -93,32 +167,33 @@ public class SpeechService extends LifecycleService
     }
 
     public static final String ACTION_CONFIGURE         = "org.software.activityrecognition.ACTION_CONFIGURE";
-
-    public static final String EXTRA_SRC_TRG_LANGUAGE   = "EXTRA_SRC_TRG_LANGUAGE";
     public static final String ACTION_START_LISTENING   = "org.software.activityrecognition.ACTION_START_LISTENING";
-    public static final String EXTRA_SET_FOREGROUND = "EXTRA_FOREGROUND";
-
-
     public static final String ACTION_SAY               = "org.software.activityrecognition.ACTION_SAY";
     public static final String ACTION_RECOGNIZED_SPEECH = "org.software.activityrecognition.ACTION_RECOGNIZED_SPEECH";
+
     public static final String EXTRA_UTTERANCE          = "EXTRA_UTTERANCE";
     public static final String EXTRA_CONFIDENCE         = "EXTRA_CONFIDENCE";
+    public static final String EXTRA_SET_FOREGROUND     = "EXTRA_FOREGROUND";
+    public static final String EXTRA_LANGUAGE           = "EXTRA_LANGUAGE";
 
 
 
     private ServiceConnectionHandler<ServiceBinder<TranslationService>> mTranslationConnection;
 
-    private LogHelper mLog;
+
     private DefaultLifecycleObserver mForegroundLifecycle;
 
     private SpeechServicePreferences mPreferences;
     private List<Voice> mAvailableVoices;
 
+
+
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent)
     {
-        Locale language = intent.hasExtra(EXTRA_SRC_TRG_LANGUAGE)? (Locale) intent.getSerializableExtra(EXTRA_SRC_TRG_LANGUAGE) : getLanguage();
+        Locale language = intent.hasExtra(EXTRA_LANGUAGE)? (Locale) intent.getSerializableExtra(EXTRA_LANGUAGE) : getSpokenLanguage();
         return new SpeechBinder(this, language);
     }
 
@@ -127,100 +202,114 @@ public class SpeechService extends LifecycleService
     public void onCreate()
     {
         super.onCreate();
-        ASR.FREE_FORM.initialize(this);
-        TTS.INSTANCE.initialize(this);
-        mPreferences = AppInitializer.getInstance(this).initializeComponent(SpeechPreferencesInitializer.class);
-        mLog = LogHelper.newClassTag(this);
+        mPreferences = new SpeechServicePreferences(this);
         mTranslationConnection = new ServiceConnectionHandler<>(this);
         mTranslationConnection.bind(TranslationService.class);
+
+        getAvailableVoices(getSpokenLanguage());
+        mAvailableVoices = null;
+
+        mPreferences.language().registerListener( p -> {
+            getAvailableVoices(getSpokenLanguage());
+        });
+
+
+        registerAction(this::onConfigureIntent, ACTION_CONFIGURE);
+        registerAction(this::onStartListeningIntent, ACTION_START_LISTENING);
+        registerAction(this::onSayIntent, ACTION_SAY, EXTRA_UTTERANCE);
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId)
-    {
-        super.onStartCommand(intent, flags, startId);
-
-
-
-        switch(intent.getAction())
-        {
-            case ACTION_CONFIGURE:
-                onConfigureIntent(intent);
-                break;
-
-            case ACTION_START_LISTENING:
-                onStartListeningIntent(intent);
-                break;
-
-            case ACTION_SAY:
-                onSayIntent(intent);
-                break;
-        }
-
-
-        return START_REDELIVER_INTENT;
-    }
-
-    /**
-     * Uses extras EXTRA_SRC_TRG_LANGUAGE
-     * @param intent
-     */
-    private void onStartListeningIntent(Intent intent)
-    {
-        Locale sourceLanguage = intent.hasExtra(EXTRA_SRC_TRG_LANGUAGE)?
-                (Locale) intent.getSerializableExtra(EXTRA_SRC_TRG_LANGUAGE) :
-                getLanguage();
-        startListening(sourceLanguage, null);
-    }
-
-    /**
-     * Uses extras EXTRA_SRC_TRG_LANGUAGE, EXTRA_UTTERANCE
-     * @param intent
-     */
-    private void onSayIntent(Intent intent)
-    {
-        Locale sourceLanguage = intent.hasExtra(EXTRA_SRC_TRG_LANGUAGE)?
-                (Locale) intent.getSerializableExtra(EXTRA_SRC_TRG_LANGUAGE) :
-                getLanguage();
-        String utterance = intent.hasExtra(EXTRA_UTTERANCE)? intent.getStringExtra(EXTRA_UTTERANCE) : null;
-        if (utterance != null)
-            say(utterance, sourceLanguage, null);
-    }
-
-    /**
-     * Uses extras EXTRA_SRC_TRG_LANGUAGE, EXTRA_FOREGROUND
-     * @param intent
-     */
-    private void onConfigureIntent(Intent intent)
-    {
-        Locale sourceLanguage = intent.hasExtra(EXTRA_SRC_TRG_LANGUAGE)?
-                (Locale) intent.getSerializableExtra(EXTRA_SRC_TRG_LANGUAGE) :
-                getLanguage();
-        if (intent.hasExtra(EXTRA_SET_FOREGROUND))
-            setForeground(intent.getBooleanExtra(EXTRA_SET_FOREGROUND, false), sourceLanguage);
-    }
 
     @Override
     public void onDestroy()
     {
         super.onDestroy();
         mTranslationConnection.unbind();
-        ASR.FREE_FORM.destroy();
-        TTS.INSTANCE.destroy();
         mPreferences.clearListeners();
     }
 
-    public List<Voice> getAvailableVoices()
+    /**
+     * Uses extras EXTRA_LANGUAGE
+     * @param intent
+     */
+    private void onStartListeningIntent(Intent intent)
     {
+        Locale sourceLanguage = intent.hasExtra(EXTRA_LANGUAGE)?
+                (Locale) intent.getSerializableExtra(EXTRA_LANGUAGE) :
+                getSpokenLanguage();
+        startListening(sourceLanguage, null, null);
+    }
+
+
+    /**
+     * Uses extras EXTRA_LANGUAGE, EXTRA_UTTERANCE
+     * @param intent
+     */
+    private void onSayIntent(Intent intent)
+    {
+        Locale sourceLanguage = intent.hasExtra(EXTRA_LANGUAGE)?
+                (Locale) intent.getSerializableExtra(EXTRA_LANGUAGE) :
+                getSpokenLanguage();
+
+        String utterance =  intent.getStringExtra(EXTRA_UTTERANCE);
+
+        if (utterance != null)
+            say(utterance, sourceLanguage, null, null);
+    }
+
+
+    /**
+     * Uses extras EXTRA_LANGUAGE, EXTRA_SET_FOREGROUND
+     * @param intent
+     */
+    private void onConfigureIntent(Intent intent)
+    {
+        Locale targetLanguage = intent.hasExtra(EXTRA_LANGUAGE)?
+                (Locale) intent.getSerializableExtra(EXTRA_LANGUAGE) :
+                getSpokenLanguage();
+
+        setForeground(
+                intent.getBooleanExtra(EXTRA_SET_FOREGROUND, false),
+                targetLanguage
+        );
+    }
+
+
+    /**
+     * Returns the voices that are available for the given language
+     * @param language language of the voices to retrieve
+     * @return
+     */
+    public List<Voice> getAvailableVoices(Locale language)
+    {
+        if (mAvailableVoices == null || mAvailableVoices.size() == 0 || !mAvailableVoices.get(0).getLocale().toLanguageTag().equals(language.toLanguageTag()))
+            mAvailableVoices = TTS.getInstance().getAvailableVoices(voice -> voice.getLocale().getLanguage().equals(language.getLanguage()));
         return mAvailableVoices;
     }
+
+
+    /**
+     * Gets the voice selected in the preferences
+     * @return selected voice
+     */
+    private Voice getSpeakVoice()
+    {
+        String voiceName = mPreferences.voiceName(getSpokenLanguage()).get(null);
+
+        List<Voice> filtered = getAvailableVoices(getSpokenLanguage())
+                .stream()
+                .filter( v -> voiceName == null || v.getName().equals(voiceName))
+                .collect(Collectors.toList());
+        return (filtered.size() == 0)? null : filtered.get(0);
+    }
+
 
     /**
      * Returns the speech interface language. That is the language used by the user when talking or listening
      * from/to the device
      * @return the user's language
      */
-    public Locale getLanguage()
+    public Locale getSpokenLanguage()
     {
         return Locale.forLanguageTag(mPreferences.language().get());
     }
@@ -229,60 +318,80 @@ public class SpeechService extends LifecycleService
 
 
     /**
-     * Start listening from the device's microphone
+     * Start listening from the device's microphone. The language used to interpret of speech is the same
+     * as the spoken language
      * @param callback callback for the operation
      */
     public void startListening(Consumer<String> callback)
     {
-        startListening(getLanguage(), callback);
+        startListening(getSpokenLanguage(), null, callback);
     }
 
 
     /**
      * Start listening from the device's microphone
-     * @param targetLanguage target language to which the recognized speech is translated
-     * @param callback callback for the operation
+     *
+     * @param targetLanguage target language to which the recognized speech is translated to.
+     *                       The recognized speech is translated to this language before calling the callback
+     * @param callback       callback for the operation
      */
-    public void startListening(Locale targetLanguage, Consumer<String> callback)
+    public void startListening(Locale targetLanguage, @Nullable Consumer<ListenCommand.Builder> commandBuilder, @Nullable Consumer<String> callback)
     {
         if (isBusy())
         {
-            mLog.w("Ignoring a startListening() call because the service is already busy.");
+            logger().w("Ignoring a startListening() call because the service is already busy.");
             return;
         }
 
+
         int maxRecognizedResults = mPreferences.maxRecognizedResults().get();
+        int minSilenceMillis     = mPreferences.minSilenceMillis().get();
+
+        ListenCommand.Builder builder = new ListenCommand.Builder();
+        builder.setLanguage(getSpokenLanguage())
+                .setMaxResults(maxRecognizedResults)
+                .setLanguageModel(RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .setCompleteSilenceMillis(minSilenceMillis);
+
+        if (commandBuilder != null)
+            commandBuilder.accept(builder);
+
+        Locale sourceLanguage = getSpokenLanguage();
+        builder.setLanguage(sourceLanguage)
+                .setListener(new BaseSpeechRecognitionListener()
+                {
+                    @Override
+                    public void onError(int i)
+                    {
+                        super.onError(i);
+                        if (callback != null)
+                            callback.accept(null);
+                        logger().e("ASR error (%s)", i);
+                    }
+
+                    @Override
+                    protected void onRecognizedSpeech(List<Pair<String, Float>> results)
+                    {
+                        super.onRecognizedSpeech(results);
+                        String userSpeech = results.get(0).first;
+
+                        logger().i("Translating (%s) from (%s) to (%s)", userSpeech, sourceLanguage, targetLanguage);
+                        userSpeech = translate(userSpeech, sourceLanguage, targetLanguage);
+                        if (callback != null)
+                            callback.accept(userSpeech);
+
+                        Intent broadcast = new Intent(ACTION_RECOGNIZED_SPEECH);
+                        broadcast.putExtra(EXTRA_UTTERANCE, userSpeech);
+                        broadcast.putExtra(EXTRA_CONFIDENCE, results.get(0).second);
+                        broadcast.putExtra(EXTRA_LANGUAGE, targetLanguage);
+                        LocalBroadcastManager.getInstance(SpeechService.this).sendBroadcast(broadcast);
+                    }
+                });
 
 
-        Locale sourceLanguage = getLanguage();
-        ASR.FREE_FORM.setLanguage(sourceLanguage);
-        ASR.FREE_FORM.setMaxRecognitionResults(maxRecognizedResults);
-        ASR.FREE_FORM.startListening(new BaseSpeechRecognitionListener()
-        {
-            @Override
-            public void onError(int i)
-            {
-                super.onError(i);
-                callback.accept(null);
-                mLog.e("ASR error (%s)", i);
-            }
-
-            @Override
-            protected void onRecognizedSpeech(List<Pair<String, Float>> results)
-            {
-                super.onRecognizedSpeech(results);
-                String userSpeech = results.get(0).first;
-                userSpeech = translate(userSpeech, sourceLanguage, targetLanguage);
-                callback.accept(userSpeech);
-
-                Intent broadcast = new Intent(ACTION_RECOGNIZED_SPEECH);
-                broadcast.putExtra(EXTRA_UTTERANCE, userSpeech);
-                broadcast.putExtra(EXTRA_CONFIDENCE, results.get(0).second);
-                broadcast.putExtra(EXTRA_SRC_TRG_LANGUAGE, targetLanguage);
-                sendBroadcast(broadcast);
-            }
-        });
+        ASR.getInstance().startListening(builder.build());
     }
+
 
 
     /**
@@ -290,18 +399,7 @@ public class SpeechService extends LifecycleService
      */
     public void stopListening()
     {
-        ASR.FREE_FORM.stopListening();
-    }
-
-
-    /**
-     * Say something through the device's speakers
-     * @param message message to say
-     * @param callback optional callback for the operation
-     */
-    public void say(String message, @Nullable Consumer<Boolean> callback)
-    {
-        say(message, getLanguage(), callback);
+        ASR.getInstance().stopListening();
     }
 
 
@@ -309,39 +407,38 @@ public class SpeechService extends LifecycleService
 
     /**
      * Say something through the device's speakers
-     * @param message message to say
+     * @param prompt message to say
      * @param sourceLanguage source language of the message. Before saying it, the message will be
      *                       translated from this language to the service's language
      * @param callback optional callback for the operation
      */
-    public void say(String message, Locale sourceLanguage, @Nullable Consumer<Boolean> callback)
+    public void say(String prompt, Locale sourceLanguage, @Nullable Consumer<SpeakCommand.Builder> commandBuilder, @Nullable Consumer<Boolean> callback)
     {
         if (isBusy())
         {
-            mLog.w("Ignoring a say() call because the service is already busy.");
+            logger().w("Ignoring a say() call because the service is already busy.");
             return;
         }
-        Locale targetLanguage = getLanguage();
+        Locale targetLanguage = getSpokenLanguage();
         float speechRate = mPreferences.voiceSpeed().get() / 100.f;
-        String voiceName = mPreferences.voiceName().get();
-
-        message = translate(message, sourceLanguage, targetLanguage);
-        TTS.INSTANCE.setSpeechRate(speechRate);
-        TTS.INSTANCE.setVoice(voiceName);
-        TTS.INSTANCE.setLanguage(targetLanguage);
-
-        if (mAvailableVoices == null)
-            mAvailableVoices = TTS.INSTANCE.getAvailableVoices(voice -> voice.getLocale().equals(getLanguage()));
-        if (mAvailableVoices != null && mAvailableVoices.size() > 0)
-            TTS.INSTANCE.setVoice(mAvailableVoices.get(0));
 
 
-        TTS.INSTANCE.say(message, new UtteranceProgressListener()
+        prompt = translate(prompt, sourceLanguage, targetLanguage);
+
+        SpeakCommand.Builder builder = new SpeakCommand.Builder();
+        builder.setSpeechRate(speechRate)
+                .setPrompt(prompt)
+                .setLanguage(targetLanguage)
+                .setVoice(getSpeakVoice());
+        if (commandBuilder != null)
+            commandBuilder.accept(builder);
+
+
+        builder.setListener(new UtteranceProgressListener()
         {
             @Override
             public void onStart(String s)
             {
-
             }
 
             @Override
@@ -356,9 +453,11 @@ public class SpeechService extends LifecycleService
             {
                 if (callback != null)
                     callback.accept(false);
-                mLog.e("TTS error: (%s)", s);
+                logger().e("TTS error. Error message: (%s)", s);
             }
         });
+
+        TTS.getInstance().say(builder.build());
     }
 
     /**
@@ -377,7 +476,7 @@ public class SpeechService extends LifecycleService
      */
     public boolean isListening()
     {
-        return ASR.FREE_FORM.isListening();
+        return ASR.getInstance().isListening();
     }
 
     /**
@@ -386,7 +485,7 @@ public class SpeechService extends LifecycleService
      */
     public boolean isTalking()
     {
-        return TTS.INSTANCE.isTalking();
+        return TTS.getInstance().isTalking();
     }
 
 
@@ -418,10 +517,11 @@ public class SpeechService extends LifecycleService
     /**
      * Show the foreground service notification
      * @param setForeground whether to show the foreground notification
-     * @param language source/target language to use in the listen action
+     * @param targetLanguage target language to use in the listen action.
+     *                       The recognized speech is translated to this language before broadcasting the result
      */
     @SuppressLint("LaunchActivityFromNotification")
-    private void setForeground(boolean setForeground, Locale language)
+    private void setForeground(boolean setForeground, Locale targetLanguage)
     {
         if (setForeground && !isForeground())
         {
@@ -429,7 +529,7 @@ public class SpeechService extends LifecycleService
                     10476,
                     new Intent(this, SpeechService.class)
                             .setAction(ACTION_START_LISTENING)
-                            .putExtra(EXTRA_SRC_TRG_LANGUAGE, language),
+                            .putExtra(EXTRA_LANGUAGE, targetLanguage),
                     PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE
             );
 
@@ -472,7 +572,7 @@ public class SpeechService extends LifecycleService
     public static ServiceConnectionHandler<SpeechBinder> newConnection(Context context, Locale srcTrgLanguage)
     {
         return new ServiceConnectionHandler<SpeechBinder>(context).setIntentBuilder(intent -> {
-            intent.putExtra(EXTRA_SRC_TRG_LANGUAGE, srcTrgLanguage);
+            intent.putExtra(EXTRA_LANGUAGE, srcTrgLanguage);
         });
     }
 }

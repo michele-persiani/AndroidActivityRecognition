@@ -17,12 +17,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import umu.software.activityrecognition.R;
+import umu.software.activityrecognition.activities.shared.ListViewActivity;
 import umu.software.activityrecognition.shared.util.AndroidUtils;
+
+
 
 public class SensorsActivity extends ListViewActivity
 {
-    public static final int SAMPLING_PERIOD_MILLIS = 100;
-
     private static class SensorViewHolder extends ViewHolder implements SensorEventListener
     {
 
@@ -32,17 +33,14 @@ public class SensorsActivity extends ListViewActivity
         public SensorViewHolder(@NonNull View itemView)
         {
             super(itemView);
-            textView = itemView.findViewById(R.id.textView);
+            textView = itemView.findViewById(R.id.textView_summary);
         }
         @Override
         public void onSensorChanged(SensorEvent sensorEvent)
         {
             numEvents += 1;
-            String str = String.format("%s %s %s",
-                    numEvents,
-                    Arrays.toString(sensorEvent.values),
-                    sensorEvent.sensor.getName()
-            );
+            String values = Arrays.toString(sensorEvent.values);
+            String str = String.format("%s", values.substring(1, values.length()-2));
             textView.setText(str);
         }
 
@@ -72,7 +70,7 @@ public class SensorsActivity extends ListViewActivity
     @Override
     protected View createListEntryView()
     {
-        return getLayoutInflater().inflate(R.layout.sensor_holder, null, false);
+        return getLayoutInflater().inflate(R.layout.holder_sensor, null, false);
     }
 
     @Override
@@ -94,17 +92,17 @@ public class SensorsActivity extends ListViewActivity
     {
         SensorViewHolder sensorHolder = (SensorViewHolder) holder;
         View view = sensorHolder.getView();
-        Button button = view.findViewById(R.id.button);
-        TextView textView = view.findViewById(R.id.textView);
+        Button button = view.findViewById(R.id.button_select);
+        TextView textView = view.findViewById(R.id.textView_title);
         textView.setText(sensors.get(position).getName());
 
         button.setOnClickListener( (btn) -> {
-            boolean isRecording = !this.recording.get(position);
-            if (isRecording)
-                sensorManager.registerListener(sensorHolder, sensors.get(position),  SAMPLING_PERIOD_MILLIS * 1000);
+            boolean isRecording = this.recording.get(position);
+            if (!isRecording)
+                sensorManager.registerListener(sensorHolder, sensors.get(position),  SensorManager.SENSOR_DELAY_NORMAL);
             else
                 sensorManager.unregisterListener(sensorHolder);
-            recording.set(position, isRecording);
+            recording.set(position, !isRecording);
         });
     }
 
@@ -113,5 +111,6 @@ public class SensorsActivity extends ListViewActivity
     {
         super.onViewRecycled(holder);
         sensorManager.unregisterListener((SensorEventListener) holder);
+        ((TextView)holder.getView().findViewById(R.id.textView_summary)).setText("");
     }
 }
