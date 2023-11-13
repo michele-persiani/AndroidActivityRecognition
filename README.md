@@ -2,7 +2,7 @@
 
 
 
-Android application that records and saves the data from the available sensors.
+Android application that records and saves the data from the device's available sensors.
 
 
 Main components:
